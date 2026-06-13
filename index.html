@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f6434">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Putten Inmeten</title>
+<style>
+:root {
+      --bg:           #ffffff;
+      --bg-2:         #ffffff;
+      --bg-3:         #f0f0f0;
+      --card:         #ffffff;
+      --tekst:        #111111;
+      --subtekst:     #555555;
+      --rand:         rgba(0,0,0,0.18);
+      --accent:       #0f6434;
+      --accent-licht: #e8f4ec;
+      --accent-tekst: #0a4d27;
+      --gevaar:       #c0392b;
+      --gevaar-licht: #c0392b;
+      --gevaar-tekst: #ffffff;
+      --oranje:       #ed6f26;
+      --rood-knop:    #c0392b;
+      --invoer-bg:    #f7f7f7;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:           #111111;
+        --bg-2:         #111111;
+        --bg-3:         #2a2a2a;
+        --card:         #1a1a1a;
+        --tekst:        #f5f5f5;
+        --subtekst:     #aaaaaa;
+        --rand:         rgba(255,255,255,0.15);
+        --accent:       #1e8047;
+        --accent-licht: #0a3d1f;
+        --accent-tekst: #6dba8a;
+        --gevaar:       #e74c3c;
+        --gevaar-licht: #e74c3c;
+        --gevaar-tekst: #ffffff;
+        --oranje:       #e8811a;
+        --rood-knop:    #e74c3c;
+        --invoer-bg:    #2a2a2a;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--tekst);
+      min-height: 100vh;
+      padding: 12px;
+      font-size: 16px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .app-titel {
+      font-size: 1.5rem;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--tekst);
+      margin-bottom: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--rand);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--subtekst);
+      margin-bottom: 3px;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+
+    label:first-child { margin-top: 0; }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--rand);
+      background: var(--invoer-bg);
+      color: var(--tekst);
+      font-size: 1rem;
+      -webkit-appearance: none;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-licht);
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      border: 1px solid var(--rand);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      background: var(--bg-3);
+      color: var(--tekst);
+      transition: opacity 0.15s;
+      text-align: center;
+    }
+
+    .btn:active { opacity: 0.7; }
+
+    .btn-primair {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .btn-gevaar {
+      background: var(--gevaar);
+      color: var(--gevaar-tekst);
+      border-color: var(--gevaar);
+    }
+
+    .btn-rood {
+      background: var(--oranje);
+      color: #ffffff;
+      border-color: var(--oranje);
+    }
+
+    .btn-oranje {
+      background: var(--oranje);
+      color: #ffffff;
+      border-color: var(--oranje);
+    }
+
+    .btn-small {
+      display: inline-block;
+      width: auto;
+      padding: 10px 18px;
+      font-size: 1rem;
+      margin-top: 0;
+    }
+
+    .btn-rij {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn-rij .btn { flex: 1; margin-top: 0; }
+
+    .lijst-item {
+      background: var(--bg-3);
+      border-radius: 8px;
+      border: 1px solid var(--rand);
+      padding: 11px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .lijst-item-naam { font-weight: 600; font-size: 0.95rem; }
+    .lijst-item-meta { font-size: 0.78rem; color: var(--subtekst); margin-top: 2px; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.55);
+      z-index: 100;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 12px 12px;
+    }
+
+    .modal-overlay.actief { display: flex; }
+
+    .modal {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--rand);
+      padding: 18px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 82vh;
+      overflow-y: auto;
+    }
+
+    .modal h2 { margin-bottom: 10px; }
+
+    .leeg {
+      text-align: center;
+      color: var(--subtekst);
+      padding: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .tag {
+      display: inline-block;
+      background: var(--accent-licht);
+      color: var(--accent-tekst);
+      border-radius: 6px;
+      padding: 1px 7px;
+      font-size: 0.75rem;
+      margin-left: 6px;
+      font-weight: 600;
+    }
+
+    .tag-rood {
+      background: var(--gevaar);
+      color: #ffffff;
+    }
+
+    .scherm { display: none; }
+    .scherm.actief { display: block; }
+
+    #camera-input { display: none; }
+
+    .foto-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .foto-thumb {
+      position: relative;
+      aspect-ratio: 3/4;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--bg-3);
+    }
+
+    .foto-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .foto-nr {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .foto-del {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: var(--gevaar);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .invoer-rij {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .diam-voorstel {
+      background: var(--accent-licht);
+      color: var(--accent-tekst);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      margin-top: 6px;
+      display: none;
+      font-weight: 600;
+    }
+
+    .put-detail-kop {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .put-detail-id {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .foto-teller-kop {
+      font-size: 0.82rem;
+      color: var(--subtekst);
+      font-weight: 500;
+    }
+
+    .preview-meta {
+      font-size: 0.82rem;
+      color: var(--subtekst);
+      margin-bottom: 3px;
+    }
+
+    .melding {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      z-index: 200;
+      display: none;
+      max-width: calc(100% - 32px);
+      text-align: center;
+    }
+
+    /* ======= RADIO BUTTONS ======= */
+    .radio-groep {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .radio-optie {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .radio-optie input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--rand);
+      background: var(--invoer-bg);
+      cursor: pointer;
+      position: relative;
+      margin: 0;
+      padding: 0;
+    }
+
+    .radio-optie input[type="radio"]:checked {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: inset 0 0 0 4px var(--invoer-bg);
+    }
+
+    .radio-optie span {
+      font-size: 0.95rem;
+      color: var(--tekst);
+      font-weight: 400;
+    }
+
+    .radio-optie input[type="text"] {
+      flex: 1;
+      margin: 0;
+      padding: 8px 12px;
+    }
+
+    /* ======= PUT TEKENING ======= */
+    .put-canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+    }
+
+    #put-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: auto;
+    }
+
+    #put-canvas.sleep-actief {
+      touch-action: none;
+    }
+
+    .card-gedimd {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="melding" id="melding"></div>
+
+<!-- SCHERM: PROJECTEN -->
+<div id="s-projecten" class="scherm">
+  <div class="app-header">
+    <div class="app-titel">⬡ Putten Inmeten</div>
+  </div>
+
+  <div class="card">
+    <h2>Nieuw project</h2>
+    <label>Projectnaam</label>
+    <input type="text" id="np-naam" placeholder="bijv. Barkenkamp Groenlo" oninput="hoofdlettersPerWoord(this)">
+    <label>Initialen</label>
+    <input type="text" id="np-initialen" placeholder="bijv. PD" oninput="naarHoofdletters(this)" maxlength="6">
+    <label>Datum</label>
+    <input type="date" id="np-datum">
+    <button class="btn btn-primair" onclick="projectAanmaken()">Project aanmaken</button>
+  </div>
+
+  <div class="card">
+    <h2>Bestaande projecten</h2>
+    <div id="project-lijst"></div>
+  </div>
+</div>
+
+<!-- SCHERM: PUTTEN LIJST -->
+<div id="s-putten" class="scherm">
+  <div class="app-header">
+    <div class="app-titel">⬡ Putten Inmeten</div>
+    <button class="btn btn-small" onclick="naarProjecten()">← Terug</button>
+  </div>
+
+  <div class="card">
+	<div class="lijst-item-naam" id="putten-project-naam" style="font-size:1.4rem;color:var(--accent);font-weight:700;"></div>
+    <div class="lijst-item-meta" id="putten-project-meta" style="font-size:0.95rem;margin-top:3px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Put toevoegen</h2>
+    <label>Put ID <span style="font-weight:400;color:var(--subtekst)">(leeg = automatisch)</span></label>
+    <input type="text" id="nieuwe-put-id" placeholder="bijv. G-1042 of leeg laten">
+    <button class="btn btn-primair" onclick="putAanmaken()">+ Put toevoegen</button>
+  </div>
+
+<div class="card">
+    <h2>Putten <span id="putten-teller" class="tag">0</span></h2>
+    <div id="putten-lijst"></div>
+  </div>
+
+<div class="card">
+    <h2>Exporteren</h2>
+    <button class="btn btn-primair" onclick="exporteerRapport()">📤 Deel rapport</button>
+    <button class="btn" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
+    <div id="fotomap-pad" style="font-size:0.78rem;color:var(--subtekst);margin-top:5px;padding-left:4px;"></div>
+  </div>
+</div>
+
+<!-- SCHERM: PUT DETAIL -->
+<div id="s-put-detail" class="scherm">
+  <div class="app-header">
+    <div class="app-titel">⬡ Putten Inmeten</div>
+    <button class="btn btn-small" onclick="naarPuttenLijst()">← Terug</button>
+  </div>
+
+  <!-- FOTO -->
+  <div class="card">
+    <div class="put-detail-kop">
+      <div class="put-detail-id" id="d-put-id"></div>
+      <div class="foto-teller-kop" id="d-foto-teller"></div>
+    </div>
+    <div class="lijst-item-meta" id="d-put-project" style="margin-bottom:10px;"></div>
+    <button class="btn btn-rood" id="btn-foto" onclick="fotoMaken()">📷 Foto maken</button>
+    <div class="foto-grid" id="foto-grid"></div>
+  </div>
+
+  <!-- PUT ALGEMEEN -->
+  <div class="card" id="card-put-algemeen">
+    <h2>Put algemeen</h2>
+    <div class="radio-groep">
+      <label class="radio-optie">
+        <input type="radio" name="put-status" id="ps-vast" value="vast" onchange="putStatusGewijzigd()">
+        <span>Niet te openen, zit vast</span>
+      </label>
+      <label class="radio-optie">
+        <input type="radio" name="put-status" id="ps-maaiveld" value="maaiveld" onchange="putStatusGewijzigd()">
+        <span>Niet te vinden, onder maaiveld</span>
+      </label>
+      <label class="radio-optie">
+        <input type="radio" name="put-status" id="ps-vrij" value="vrij" checked onchange="putStatusGewijzigd()">
+        <input type="text" id="ps-opmerking" placeholder="Opmerking (optioneel)"
+          onfocus="document.getElementById('ps-vrij').checked=true; putStatusGewijzigd();"
+          oninput="document.getElementById('ps-vrij').checked=true; putStatusGewijzigd();">
+      </label>
+    </div>
+  </div>
+
+  <!-- TYPE + AANSLUITINGEN -->
+  <div class="card" id="card-type-aansluiting">
+    <h2>Type put &amp; aansluitingen</h2>
+    <div class="invoer-rij">
+      <div>
+        <label>Type put</label>
+        <select id="m-type" onchange="typePutGewijzigd()">
+          <option value="">— kies —</option>
+          <option value="GWA">GWA</option>
+          <option value="DWA">DWA</option>
+          <option value="HWA">HWA</option>
+          <option value="ITR">ITR</option>
+          <option value="DRAIN">DRAIN</option>
+        </select>
+      </div>
+      <div>
+        <label>Aantal aansluitingen</label>
+        <input type="number" id="t-aantal" min="1" max="12" placeholder="bijv. 3">
+      </div>
+    </div>
+	<button class="btn btn-primair" onclick="tekenPut()" style="margin-top:10px;">Tekenen / bijwerken</button>
+
+
+<div class="put-canvas-wrap" id="card-tekening" style="display:none;position:relative;">
+  <canvas id="put-canvas"></canvas>
+  <div id="kompas-wrap" style="position:absolute;top:8px;left:8px;width:44px;height:44px;display:none;">
+    <canvas id="kompas-canvas" width="44" height="44"></canvas>
+    <div style="font-size:0.6rem;color:var(--subtekst);text-align:center;margin-top:1px;">kompas</div>
+  </div>
+  <div style="font-size:0.78rem;color:var(--subtekst);margin:10px 0 4px;text-align:center;" id="noord-label" style="display:none;"></div>
+</div>
+
+    <div style="font-size:0.78rem;color:var(--subtekst);margin-top:6px;display:none;" id="tekening-uitleg">
+      Sleep een lijn om te verplaatsen · Tik op een lijn om waarden in te vullen
+    </div>
+  </div>
+
+  <!-- AANSLUITING INVULLEN (inline) -->
+  <div class="card" id="card-aansluiting" style="display:none;">
+    <h2 id="aansluiting-titel">Aansluiting</h2>
+    <input type="hidden" id="a-idx">
+	<input type="hidden" id="a-stroom">
+
+    <div class="invoer-rij">
+      <div>
+        <label>BOB (cm)</label>
+		<input type="number" id="a-bob" placeholder="bijv. 165" inputmode="decimal" oninput="aansluiting_berekenDiam()">
+      </div>
+      <div>
+        <label>BBB (cm)</label>
+        <input type="number" id="a-bbb" placeholder="bijv. 136" inputmode="decimal" oninput="aansluiting_berekenDiam()">
+      </div>
+    </div>
+    <div class="diam-voorstel" id="a-diam-voorstel"></div>
+
+    <label>Diameter (mm)</label>
+    <select id="a-diam">
+      <option value="">— kies —</option>
+      <option>110</option><option>125</option><option>160</option>
+      <option>200</option><option>250</option><option>300</option>
+      <option>315</option><option>400</option><option>500</option>
+      <option>600</option><option>700</option><option>800</option>
+      <option>900</option><option>1000</option><option>1200</option>
+	  <option>1250</option><option>1400</option><option>1500</option>
+	  <option>1600</option><option>1800</option><option>2000</option><option>9999</option>
+    </select>
+
+    <div class="invoer-rij" style="margin-top:10px;">
+      <div>
+        <label>Vorm</label>
+        <select id="a-vorm">
+          <option value="">— kies —</option>
+          <option>Rond</option><option>Ovaal</option><option>Onbekend</option>
+        </select>
+      </div>
+      <div>
+        <label>Materiaal</label>
+        <select id="a-mat">
+          <option value="">— kies —</option>
+          <option>Beton</option><option>PVC</option><option>Ribbel</option><option>Beton + Reline</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Opmerking</label>
+    <textarea id="a-opmerking" placeholder="Optioneel" rows="3" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--rand);background:var(--invoer-bg);color:var(--tekst);font-size:1rem;resize:none;font-family:inherit;"></textarea>
+	
+	<label>Stromingsrichting</label>
+    <div class="btn-rij" style="margin-bottom:4px;">
+      <button type="button" id="sr-leeg"       class="btn btn-small sr-knop" onclick="srKiezen('')">Onbekend</button>
+      <button type="button" id="sr-naar-deze"  class="btn btn-small sr-knop" onclick="srKiezen('naar-deze')">→ Naar deze put</button>
+      <button type="button" id="sr-naar-volgende" class="btn btn-small sr-knop" onclick="srKiezen('naar-volgende')">→ Naar volgende</button>
+    </div>
+
+    <div class="btn-rij" style="margin-top:10px;">
+      <button class="btn" onclick="aansluitingAnnuleren()">Annuleren</button>
+      <button class="btn btn-primair" onclick="aansluitingOpslaan()">Opslaan</button>
+    </div>
+  </div>
+
+  <!-- TERUG KNOP MIDDEN -->
+  <div style="margin-bottom:12px;">
+    <button class="btn" onclick="naarPuttenLijst()">← Terug naar lijst</button>
+  </div>
+
+  <!-- PUT ID -->
+  <div class="card">
+    <h2>Put ID aanpassen</h2>
+    <input type="text" id="d-bewerk-id">
+    <div class="btn-rij">
+      <button class="btn btn-gevaar" onclick="detailPutVerwijderen()">Put verwijderen</button>
+      <button class="btn btn-primair" onclick="detailPutIdOpslaan()">ID opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PROJECT -->
+<div class="modal-overlay" id="m-project">
+  <div class="modal">
+    <h2 id="m-project-titel"></h2>
+    <div id="m-project-inhoud"></div>
+    <div class="btn-rij" style="margin-top:12px;">
+      <button class="btn btn-gevaar" onclick="projectVerwijderen()">Verwijderen</button>
+      <button class="btn btn-oranje" onclick="projectOpenen(modalProjectIdx)">Openen</button>
+    </div>
+    <button class="btn" onclick="modalSluiten('m-project')" style="margin-top:8px;">Annuleren</button>
+  </div>
+</div>
+
+<input type="file" id="camera-input" accept="image/*" capture="environment">
+
+<script>
+  const DIAMS = [110,125,160,200,250,300,315,400,500,600,700,800,900,1000,1200,1250,1400,1500,1600,1800,2000,9999];
+  const MAX_FOTO_BREEDTE = 1200;
+  const FOTO_KWALITEIT   = 0.75;
+  const FSA_ONDERSTEUND = ('showDirectoryPicker' in window);
+  
+  let fotoMapHandle = null; // FileSystemDirectoryHandle of null
+
+  let app = { globalTeller: 0, projecten: [], actiefIdx: null };
+  let actiefPutIdx    = null;
+  let modalProjectIdx = null;
+  let _gps            = null;
+  let putLadenBezig   = false;
+
+  // =====================
+  // INDEXEDDB
+  // =====================
+  let db = null;
+
+  function dbOpenen() {
+    return new Promise((ok, fout) => {
+      const req = indexedDB.open('puttenFotos', 2);
+      req.onupgradeneeded = e => {
+  const idb = e.target.result;
+  if (!idb.objectStoreNames.contains('fotos'))
+    idb.createObjectStore('fotos', { keyPath: 'naam' });
+  if (!idb.objectStoreNames.contains('instellingen'))
+    idb.createObjectStore('instellingen', { keyPath: 'sleutel' });
+};
+      req.onsuccess = e => { db = e.target.result; ok(); };
+      req.onerror   = () => fout('IndexedDB kon niet geopend worden.');
+    });
+  }
+
+  function fotoOpslaanDB(naam, data) {
+    return new Promise((ok, fout) => {
+      const tx = db.transaction('fotos', 'readwrite');
+      tx.objectStore('fotos').put({ naam, data });
+      tx.oncomplete = ok;
+      tx.onerror    = () => fout('Foto opslaan mislukt in database.');
+    });
+  }
+
+  function fotoOphalenDB(naam) {
+    return new Promise((ok) => {
+      const tx  = db.transaction('fotos', 'readonly');
+      const req = tx.objectStore('fotos').get(naam);
+      req.onsuccess = () => ok(req.result ? req.result.data : null);
+      req.onerror   = () => ok(null);
+    });
+  }
+
+  function fotoVerwijderenDB(naam) {
+    return new Promise((ok) => {
+      if (!db) { ok(); return; }
+      const tx = db.transaction('fotos', 'readwrite');
+      tx.objectStore('fotos').delete(naam);
+      tx.oncomplete = ok;
+      tx.onerror    = ok;
+    });
+  }
+
+// =====================
+// FILE SYSTEM ACCESS
+// =====================
+function handleOpslaanDB(handle) {
+  return new Promise((ok, fout) => {
+    const tx = db.transaction('instellingen', 'readwrite');
+    tx.objectStore('instellingen').put({ sleutel: 'fotoMapHandle', handle });
+    tx.oncomplete = ok;
+    tx.onerror    = () => fout('Handle opslaan mislukt.');
+  });
+}
+
+function handleOphalenDB() {
+  return new Promise((ok) => {
+    try {
+      const tx  = db.transaction('instellingen', 'readonly');
+      const req = tx.objectStore('instellingen').get('fotoMapHandle');
+      req.onsuccess = () => ok(req.result ? req.result.handle : null);
+      req.onerror   = () => ok(null);
+    } catch(e) { ok(null); }
+  });
+}
+
+async function fotoMapPermissie(handle) {
+  // Vraag permissie; geeft true als readwrite verkregen is
+  try {
+    const status = await handle.requestPermission({ mode: 'readwrite' });
+    return status === 'granted';
+  } catch(e) { return false; }
+}
+
+async function fotoMapInitialiseren() {
+  // Wordt aangeroepen bij opstarten
+  if (!FSA_ONDERSTEUND) return;
+  const handle = await handleOphalenDB();
+  if (!handle) return;
+  const ok = await fotoMapPermissie(handle);
+  if (ok) {
+    fotoMapHandle = handle;
+    toonMelding(`📁 Foto-map actief: ${handle.name}`, 3000);
+  } else {
+    fotoMapHandle = null;
+    toonMelding('Foto-maptoegang geweigerd — terugval op lokale opslag.', 4000);
+  }
+  fotoMapPadTonen();
+}
+
+async function fotoMapKiezen() {
+  // Roept de directory picker aan en slaat handle op
+  if (!FSA_ONDERSTEUND) {
+    alert('Jouw browser ondersteunt de File System Access API niet. Foto\'s worden lokaal opgeslagen.');
+    return;
+  }
+  try {
+    toonMelding('Kies een map waar foto\'s worden opgeslagen, bijv. DCIM of een map "Putten".', 5000);
+    const handle = await showDirectoryPicker({ mode: 'readwrite' });
+    await handleOpslaanDB(handle);
+    fotoMapHandle = handle;
+    toonMelding(`📁 Map gekozen: ${handle.name} ✓`, 3000);
+	fotoMapPadTonen();
+  } catch(e) {
+    if (e.name !== 'AbortError')
+      toonMelding('Map kiezen mislukt: ' + (e.message || e), 4000);
+  }
+}
+
+async function fotoSchrijvenNaarMap(naam, base64data) {
+  // base64data = "data:image/jpeg;base64,..."
+  const byteStr  = atob(base64data.split(',')[1]);
+  const buf      = new Uint8Array(byteStr.length);
+  for (let i = 0; i < byteStr.length; i++) buf[i] = byteStr.charCodeAt(i);
+  const blob     = new Blob([buf], { type: 'image/jpeg' });
+  const fh       = await fotoMapHandle.getFileHandle(naam, { create: true });
+  const writable = await fh.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
+
+async function fotoLezenUitMap(naam) {
+  // Geeft base64-string terug, of null bij fout
+  try {
+    const fh   = await fotoMapHandle.getFileHandle(naam, { create: false });
+    const file = await fh.getFile();
+    return await new Promise((ok, fout) => {
+      const r = new FileReader();
+      r.onload  = () => ok(r.result);
+      r.onerror = () => fout(null);
+      r.readAsDataURL(file);
+    });
+  } catch(e) { return null; }
+}
+
+async function fotoVerwijderenUitMap(naam) {
+  try {
+    await fotoMapHandle.removeEntry(naam);
+  } catch(e) { /* bestand bestaat niet meer — geen fout */ }
+}
+
+  async function alleFotosLaden() {
+    const project = app.projecten[app.actiefIdx];
+    if (!project) return;
+    for (const put of project.putten) {
+      for (const f of (put.fotos || [])) {
+        if (!f.data) f.data = await fotoOphalenDB(f.naam);
+      }
+    }
+  }
+
+  // =====================
+  // LOCALSTORAGE
+  // =====================
+  function laden() {
+    try {
+      const d = localStorage.getItem('puttenApp');
+      if (d) app = JSON.parse(d);
+      for (const p of app.projecten)
+        for (const put of p.putten)
+          for (const f of (put.fotos || [])) delete f.data;
+    } catch(e) {}
+  }
+
+  function opslaan() {
+    try {
+      const kopie = JSON.parse(JSON.stringify(app));
+      for (const p of kopie.projecten)
+        for (const put of p.putten)
+          for (const f of (put.fotos || [])) delete f.data;
+      localStorage.setItem('puttenApp', JSON.stringify(kopie));
+    } catch(e) {
+      toonMelding('Opslaan mislukt: ' + (e.message || 'onbekende fout'));
+    }
+  }
+
+  // =====================
+  // MELDINGEN
+  // =====================
+  let meldingTimer = null;
+  function toonMelding(tekst, duur = 3500) {
+    const el = document.getElementById('melding');
+    if (!el) { alert(tekst); return; }
+    el.textContent = tekst;
+    el.style.display = 'block';
+    if (meldingTimer) clearTimeout(meldingTimer);
+    meldingTimer = setTimeout(() => { el.style.display = 'none'; }, duur);
+  }
+
+  // =====================
+  // HULPFUNCTIES
+  // =====================
+  function vandaag() { return new Date().toISOString().split('T')[0]; }
+
+  function hoofdlettersPerWoord(el) {
+    const p = el.selectionStart;
+    el.value = el.value.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+    el.setSelectionRange(p, p);
+  }
+
+  function naarHoofdletters(el) {
+    const p = el.selectionStart;
+    el.value = el.value.toUpperCase();
+    el.setSelectionRange(p, p);
+  }
+
+  function initOphalen() { return localStorage.getItem('pp_init') || ''; }
+  function initOpslaan(v) { localStorage.setItem('pp_init', v); }
+
+  function fotoNaam(putId, initialen, nr) {
+    return `PUT-${putId}_${initialen}_${vandaag().replace(/-/g,'')}_${String(nr).padStart(2,'0')}.jpg`;
+  }
+  
+  function fotoMapPadTonen() {
+  const el = document.getElementById('fotomap-pad');
+  if (!el) return;
+  if (fotoMapHandle) {
+    el.textContent = `📂 ${fotoMapHandle.name}`;
+  } else if (db) {
+    el.textContent = '💾 Lokale opslag (geen map gekozen)';
+  } else {
+    el.textContent = '';
+  }
+}
+
+  // =====================
+  // FOTO COMPRESSIE
+  // =====================
+  function comprimeerFoto(file) {
+    return new Promise((ok, fout) => {
+      const reader = new FileReader();
+      reader.onerror = () => fout(new Error('Bestand lezen mislukt'));
+      reader.onload = ev => {
+        const img = new Image();
+        img.onerror = () => fout(new Error('Afbeelding laden mislukt'));
+        img.onload = () => {
+          let breedte = img.width, hoogte = img.height;
+          if (breedte > MAX_FOTO_BREEDTE) {
+            hoogte  = Math.round(hoogte * MAX_FOTO_BREEDTE / breedte);
+            breedte = MAX_FOTO_BREEDTE;
+          }
+          const c = document.createElement('canvas');
+          c.width = breedte; c.height = hoogte;
+          c.getContext('2d').drawImage(img, 0, 0, breedte, hoogte);
+          ok(c.toDataURL('image/jpeg', FOTO_KWALITEIT));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // =====================
+  // DIAMETER BEREKENING
+  // =====================
+  function dichtstbijzijndeDiam(mm) {
+    return DIAMS.reduce((a, b) => Math.abs(b - mm) < Math.abs(a - mm) ? b : a);
+  }
+
+  // =====================
+  // PROJECTEN
+  // =====================
+  function projectAanmaken() {
+    const naam  = document.getElementById('np-naam').value.trim();
+    const init  = document.getElementById('np-initialen').value.trim();
+    const datum = document.getElementById('np-datum').value;
+    if (!naam)  { alert('Vul een projectnaam in.'); return; }
+    if (!init)  { alert('Vul initialen in.'); return; }
+    if (!datum) { alert('Vul een datum in.'); return; }
+    initOpslaan(init);
+    app.projecten.push({ naam, init, datum, putten: [] });
+    opslaan();
+    document.getElementById('np-naam').value  = '';
+    document.getElementById('np-datum').value = vandaag();
+    projectLijstTekenen();
+    projectOpenen(app.projecten.length - 1);
+  }
+
+  function projectLijstTekenen() {
+    const el = document.getElementById('project-lijst');
+    if (!app.projecten.length) {
+      el.innerHTML = '<div class="leeg">Nog geen projecten.</div>';
+      return;
+    }
+    el.innerHTML = [...app.projecten.keys()].reverse().map(i => {
+      const p = app.projecten[i];
+      return `<div class="lijst-item">
+        <div>
+          <div class="lijst-item-naam">${p.naam}</div>
+          <div class="lijst-item-meta">${p.init} · ${p.datum} · ${p.putten.length} put(ten)</div>
+        </div>
+        <button class="btn btn-oranje btn-small" onclick="projectOpenenOfBekijken(${i})">Open</button>
+      </div>`;
+    }).join('');
+  }
+
+  function projectOpenenOfBekijken(idx) {
+    modalProjectIdx = idx;
+    const p = app.projecten[idx];
+    document.getElementById('m-project-titel').textContent = p.naam;
+    let html = `<div style="font-size:0.85rem;color:var(--subtekst);margin-bottom:10px;">${p.init} · ${p.datum}</div>`;
+    html += !p.putten.length
+      ? '<div class="leeg">Geen putten in dit project.</div>'
+      : p.putten.map(put => `<div class="lijst-item"><div>
+          <div class="lijst-item-naam">PUT ${put.id}</div>
+          <div class="lijst-item-meta">${(put.fotos||[]).length} foto('s)</div>
+        </div></div>`).join('');
+    document.getElementById('m-project-inhoud').innerHTML = html;
+    modalOpenen('m-project');
+  }
+
+  function projectOpenen(idx) {
+    app.actiefIdx = idx;
+    opslaan();
+    modalSluiten('m-project');
+    alleFotosLaden().then(() => {
+      const p = app.projecten[idx];
+      document.getElementById('putten-project-naam').textContent = p.naam;
+      document.getElementById('putten-project-meta').textContent = `${p.init} · ${p.datum}`;
+      puttenLijstTekenen();
+      toonScherm('s-putten');
+    });
+  }
+
+  function projectVerwijderen() {
+    const p = app.projecten[modalProjectIdx];
+    if (!confirm(`Project "${p.naam}" definitief verwijderen?`)) return;
+    for (const put of p.putten)
+      for (const f of (put.fotos || [])) fotoVerwijderenDB(f.naam);
+    app.projecten.splice(modalProjectIdx, 1);
+    if (app.actiefIdx === modalProjectIdx) app.actiefIdx = null;
+    else if (app.actiefIdx > modalProjectIdx) app.actiefIdx--;
+    opslaan();
+    modalSluiten('m-project');
+    projectLijstTekenen();
+  }
+
+  function naarProjecten() {
+    projectLijstTekenen();
+    toonScherm('s-projecten');
+  }
+
+  // =====================
+  // PUTTEN
+  // =====================
+  function putAanmaken() {
+    const invoer = document.getElementById('nieuwe-put-id').value.trim();
+    const id = invoer || String(++app.globalTeller);
+    const project = app.projecten[app.actiefIdx];
+    if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
+    project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '' });
+    opslaan();
+    document.getElementById('nieuwe-put-id').value = '';
+    puttenLijstTekenen();
+  }
+
+function putCompleet(put) {
+    if (put.putAlgemeen === 'Niet te openen, zit vast' ||
+        put.putAlgemeen === 'Niet te vinden, onder maaiveld') return true;
+    const heeftFoto    = (put.fotos || []).length > 0;
+    const heeftType    = !!put.type;
+    const heeftAansl   = (put.aansluitingen || []).some(a => a.bob && a.diam);
+    return heeftFoto && heeftType && heeftAansl;
+  }
+
+  function puttenLijstTekenen() {
+    const project = app.projecten[app.actiefIdx];
+    const el = document.getElementById('putten-lijst');
+    document.getElementById('putten-teller').textContent = project.putten.length;
+    if (!project.putten.length) {
+      el.innerHTML = '<div class="leeg">Nog geen putten aangemaakt.</div>';
+      return;
+    }
+    el.innerHTML = project.putten.map((put, i) => {
+      const n = (put.fotos || []).length;
+      const fotoTag = n === 0
+        ? '<span class="tag tag-rood">📷 0</span>'
+        : `<span class="tag">📷 ${n}</span>`;
+      const compleet = putCompleet(put);
+      const statusIcoon = compleet
+        ? '<span style="color:#0f6434;font-size:1rem;margin-left:6px;">✓</span>'
+        : '<span style="color:#ed6f26;font-size:1rem;margin-left:6px;">○</span>';
+      const meta = [put.type || '', put.putAlgemeen ? `⚠ ${put.putAlgemeen}` : ''].filter(Boolean).join(' · ');
+      return `<div class="lijst-item">
+        <div style="flex:1">
+          <div class="lijst-item-naam">PUT ${put.id} ${fotoTag}${statusIcoon}</div>
+          ${meta ? `<div class="lijst-item-meta">${meta}</div>` : ''}
+        </div>
+        <button class="btn btn-oranje btn-small" style="margin-left:8px;" onclick="putDetailOpenen(${i})">Open</button>
+      </div>`;
+    }).join('');
+  }
+
+  // =====================
+  // PUT DETAIL
+  // =====================
+  function putDetailOpenen(idx) {
+    putLadenBezig = true;
+    actiefPutIdx = idx;
+    const project = app.projecten[app.actiefIdx];
+    const put = project.putten[idx];
+
+    document.getElementById('d-put-id').textContent      = `PUT ${put.id}`;
+    document.getElementById('d-put-project').textContent = project.naam;
+    document.getElementById('d-bewerk-id').value         = put.id;
+    document.getElementById('m-type').value              = put.type || '';
+
+    // Put algemeen herstellen
+    const status = put.putAlgemeen || '';
+    if (status === 'Niet te openen, zit vast') {
+      document.getElementById('ps-vast').checked = true;
+      document.getElementById('ps-opmerking').value = '';
+    } else if (status === 'Niet te vinden, onder maaiveld') {
+      document.getElementById('ps-maaiveld').checked = true;
+      document.getElementById('ps-opmerking').value = '';
+    } else {
+      document.getElementById('ps-vrij').checked = true;
+      document.getElementById('ps-opmerking').value = status;
+    }
+    putStatusGewijzigd();
+
+    document.getElementById('card-aansluiting').style.display = 'none';
+
+    if (put.aansluitingen && put.aansluitingen.length > 0) {
+      document.getElementById('t-aantal').value = put.aansluitingen.length;
+    document.getElementById('card-tekening').style.display = 'block';
+    document.getElementById('noord-label').style.display = 'block';
+    document.getElementById('tekening-uitleg').style.display = 'block';
+    setTimeout(() => { initCanvas(); putCanvasTekenen(); kompasStarten(); }, 80);
+    } else {
+      document.getElementById('card-tekening').style.display = 'none';
+      document.getElementById('noord-label').style.display = 'none';
+      document.getElementById('tekening-uitleg').style.display = 'none';
+      document.getElementById('t-aantal').value = '';
+    }
+
+    fotoGridTekenen();
+    toonScherm('s-put-detail');
+	putLadenBezig = false;
+  }
+
+  function naarPuttenLijst() {
+    kompasStappen();
+    puttenLijstTekenen();
+    toonScherm('s-putten');
+  }
+
+async function detailPutIdOpslaan() {
+  const nieuwId = document.getElementById('d-bewerk-id').value.trim();
+  if (!nieuwId) { alert('Put ID mag niet leeg zijn.'); return; }
+  const project = app.projecten[app.actiefIdx];
+  if (project.putten.some((p, i) => p.id === nieuwId && i !== actiefPutIdx)) {
+    alert(`Put ID "${nieuwId}" bestaat al.`); return;
+  }
+
+  const put = project.putten[actiefPutIdx];
+
+  // Hernoem bestanden in FSA-map
+  if (FSA_ONDERSTEUND && fotoMapHandle && put.fotos) {
+    for (let i = 0; i < put.fotos.length; i++) {
+      const oudeNaam  = put.fotos[i].naam;
+      const nieuweNaam = fotoNaam(nieuwId, project.init, i + 1);
+      try {
+        // Lees oud bestand, schrijf naar nieuwe naam, verwijder oude
+        const data = await fotoLezenUitMap(oudeNaam);
+        if (data) {
+          await fotoSchrijvenNaarMap(nieuweNaam, data);
+          await fotoVerwijderenUitMap(oudeNaam);
+        }
+      } catch(e) {
+        toonMelding(`Hernoemen mislukt voor ${oudeNaam}`, 4000);
+      }
+      put.fotos[i].naam = nieuweNaam;
+      put.fotos[i].volgnummer = i + 1;
+    }
+  } else if (put.fotos) {
+    // IndexedDB: metadata bijwerken (bestanden hebben geen naam in IDB, key = naam)
+    for (let i = 0; i < put.fotos.length; i++) {
+      const oudeNaam   = put.fotos[i].naam;
+      const nieuweNaam = fotoNaam(nieuwId, project.init, i + 1);
+      const data = await fotoOphalenDB(oudeNaam);
+      if (data) {
+        await fotoOpslaanDB(nieuweNaam, data);
+        await fotoVerwijderenDB(oudeNaam);
+      }
+      put.fotos[i].naam = nieuweNaam;
+      put.fotos[i].volgnummer = i + 1;
+    }
+  }
+
+  put.id = nieuwId;
+  opslaan();
+  document.getElementById('d-put-id').textContent = `PUT ${nieuwId}`;
+  toonMelding('ID en bestandsnamen opgeslagen ✓');
+}
+
+  function detailPutVerwijderen() {
+    const project = app.projecten[app.actiefIdx];
+    const put = project.putten[actiefPutIdx];
+    if (!confirm(`Put "${put.id}" verwijderen?`)) return;
+    for (const f of (put.fotos || [])) fotoVerwijderenDB(f.naam);
+    project.putten.splice(actiefPutIdx, 1);
+    opslaan();
+    naarPuttenLijst();
+  }
+
+function putStatusGewijzigd() {
+  const val = document.querySelector('input[name="put-status"]:checked').value;
+  const kaart = document.getElementById('card-type-aansluiting');
+  kaart.classList.toggle('card-gedimd', val === 'vast' || val === 'maaiveld');
+
+  if (putLadenBezig) return; // stil negeren tijdens laden
+
+  if (actiefPutIdx !== null && app.actiefIdx !== null) {
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    let status = '';
+    if (val === 'vast') status = 'Niet te openen, zit vast';
+    else if (val === 'maaiveld') status = 'Niet te vinden, onder maaiveld';
+    else status = document.getElementById('ps-opmerking').value.trim();
+    put.putAlgemeen = status;
+    opslaan();
+    toonMelding('Algemeen opgeslagen ✓');
+  }
+}
+
+function typeAansluitingenOpslaan() {
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    put.type = document.getElementById('m-type').value;
+    opslaan();
+    toonMelding('Type opgeslagen ✓');
+  }
+
+  function typePutGewijzigd() {
+    if (actiefPutIdx === null || app.actiefIdx === null) return;
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    put.type = document.getElementById('m-type').value;
+    opslaan();
+    putCanvasBijwerken();
+	toonMelding(`Type opgeslagen ✓`);
+  }
+
+  // =====================
+  // PUT TEKENING
+  // =====================
+  let canvas, ctx, putStraal, midden;
+  let sleepIdx = null;
+  let sleepTijd = 0;
+
+  function lijnDikte(diam) {
+    const d = parseInt(diam) || 0;
+    if (d >= 1500) return 12;
+    if (d >= 1000) return 9;
+    if (d >=  500) return 6;
+    return 3;
+  }
+
+  function tekenPut() {
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    const n = parseInt(document.getElementById('t-aantal').value);
+    if (!n || n < 1 || n > 12) { alert('Vul een aantal in tussen 1 en 12.'); return; }
+
+    if (!put.aansluitingen || put.aansluitingen.length !== n) {
+      const bestaand = put.aansluitingen || [];
+      put.aansluitingen = Array.from({ length: n }, (_, i) =>
+        bestaand[i] || { hoek: (360 / n) * i, bob: '', bbb: '', diam: '', vorm: '', mat: '', opmerking: '' }
+      );
+      opslaan();
+    }
+
+    // Type ook opslaan zodat het direct in cirkel verschijnt
+    put.type = document.getElementById('m-type').value;
+    opslaan();
+
+    document.getElementById('card-tekening').style.display = 'block';
+    document.getElementById('noord-label').style.display = 'block';
+    document.getElementById('tekening-uitleg').style.display = 'block';
+    document.getElementById('card-aansluiting').style.display = 'none';
+
+    setTimeout(() => { initCanvas(); putCanvasTekenen(); kompasStarten(); }, 50);
+    toonMelding('Tekening opgeslagen ✓');
+  }
+
+  function initCanvas() {
+    canvas = document.getElementById('put-canvas');
+    const wrap = canvas.parentElement;
+    const size = wrap.offsetWidth;
+    canvas.width  = size;
+    canvas.height = size;
+    ctx = canvas.getContext('2d');
+    putStraal = size * 0.15;   // helft kleiner dan 0.28
+    midden = { x: size / 2, y: size / 2 };
+
+    canvas.removeEventListener('touchstart', onTouchStart);
+    canvas.removeEventListener('touchmove',  onTouchMove);
+    canvas.removeEventListener('touchend',   onTouchEnd);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
+    canvas.addEventListener('touchend',   onTouchEnd,   { passive: true });
+    canvas.onmousedown  = onMouseDown;
+    canvas.onmousemove  = onMouseMove;
+    canvas.onmouseup    = onMouseUp;
+  }
+
+  function putCanvasTekenen() {
+    if (!canvas) return;
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    const donker = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const tekstKleur  = donker ? '#f5f5f5' : '#111111';
+    const cirkelKleur = donker ? '#aaaaaa' : '#555555';
+
+    const lijnKleur = (a) => {
+      const heeftData = a.bob || a.diam || a.vorm || a.mat;
+      if (donker) return heeftData ? '#ffffff' : '#c0392b';
+      return heeftData ? '#111111' : '#c0392b';
+    };
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Cirkel — 2x zo dik
+    ctx.beginPath();
+    ctx.arc(midden.x, midden.y, putStraal, 0, 2 * Math.PI);
+    ctx.strokeStyle = cirkelKleur;
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // Type in midden — lees uit put.type, niet uit het select-element
+    if (put.type) {
+      ctx.fillStyle = tekstKleur;
+      ctx.font = `bold ${Math.round(putStraal * 0.45)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(put.type, midden.x, midden.y);
+    }
+
+    // Noord indicator
+    ctx.fillStyle = '#ed6f26';
+    ctx.font = `bold ${Math.round(putStraal * 0.35)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('N', midden.x, midden.y - putStraal - 16);
+
+    // Aansluitingen
+    (put.aansluitingen || []).forEach((a, i) => {
+      const rad = (a.hoek - 90) * Math.PI / 180;
+      const lijnLengte = putStraal * 1.7;
+      const x1 = midden.x + Math.cos(rad) * putStraal;
+      const y1 = midden.y + Math.sin(rad) * putStraal;
+      const x2 = midden.x + Math.cos(rad) * (putStraal + lijnLengte);
+      const y2 = midden.y + Math.sin(rad) * (putStraal + lijnLengte);
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = lijnKleur(a);
+      ctx.lineWidth = lijnDikte(a.diam);
+      ctx.stroke();
+
+      // Nummer
+      const labelAfstand = putStraal + lijnLengte + 14;
+      const lx = midden.x + Math.cos(rad) * labelAfstand;
+      const ly = midden.y + Math.sin(rad) * labelAfstand;
+      ctx.fillStyle = lijnKleur(a);
+      ctx.font = `bold ${Math.round(putStraal * 0.35)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(i + 1, lx, ly);
+
+// Diam label naast lijn
+      if (a.diam) {
+        const infoAfstand = putStraal + lijnLengte * 0.5;
+        const ix = midden.x + Math.cos(rad) * infoAfstand + Math.cos(rad + Math.PI/2) * 14;
+        const iy = midden.y + Math.sin(rad) * infoAfstand + Math.sin(rad + Math.PI/2) * 14;
+        ctx.fillStyle = donker ? '#aaaaaa' : '#555555';
+        ctx.font = `${Math.round(putStraal * 0.28)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`⌀${a.diam}`, ix, iy);
+      }
+
+      // Stromingsrichting pijl
+      if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
+        const pijlAfstand = putStraal + lijnLengte * 0.3;
+        const px = midden.x + Math.cos(rad) * pijlAfstand + Math.cos(rad - Math.PI/2) * 14;
+        const py = midden.y + Math.sin(rad) * pijlAfstand + Math.sin(rad - Math.PI/2) * 14;
+        const pijlRad  = a.stroom === 'naar-deze' ? rad + Math.PI : rad;
+        const pijlSize = putStraal * 0.22;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(pijlRad);
+        ctx.beginPath();
+        ctx.moveTo(pijlSize, 0);
+        ctx.lineTo(-pijlSize, pijlSize * 0.5);
+        ctx.lineTo(-pijlSize, -pijlSize * 0.5);
+        ctx.closePath();
+        ctx.fillStyle = '#1a6fc4';
+        ctx.fill();
+        ctx.restore();
+      }
+    });
+  }
+
+function putCanvasBijwerken() {
+  if (!canvas || !ctx) return;  // canvas nog niet geïnitialiseerd, stil negeren
+  putCanvasTekenen();
+}
+
+let kompasActief = false;
+
+function kompasStarten() {
+  const wrap = document.getElementById('kompas-wrap');
+  if (!wrap) return;
+
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iOS — niet nodig voor Android maar voor de zekerheid
+    DeviceOrientationEvent.requestPermission()
+      .then(r => { if (r === 'granted') kompasListenerToevoegen(); })
+      .catch(() => {});
+  } else if (window.DeviceOrientationEvent) {
+    kompasListenerToevoegen();
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function kompasListenerToevoegen() {
+  const wrap = document.getElementById('kompas-wrap');
+  if (wrap) wrap.style.display = 'block';
+  kompasActief = true;
+  window.addEventListener('deviceorientationabsolute', kompasUpdate, true);
+  window.addEventListener('deviceorientation', kompasUpdate, true);
+}
+
+function kompasStappen() {
+  kompasActief = false;
+  window.removeEventListener('deviceorientationabsolute', kompasUpdate, true);
+  window.removeEventListener('deviceorientation', kompasUpdate, true);
+  const wrap = document.getElementById('kompas-wrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function kompasUpdate(e) {
+  // deviceorientationabsolute geeft absolute richting op Android
+  // alpha = rotatie om z-as; 0 = noord op absolute events
+  let hoek = 0;
+  if (e.absolute && e.alpha !== null) {
+    hoek = e.alpha; // graden, 0=noord, kloksgewijs
+  } else if (e.webkitCompassHeading !== undefined) {
+    hoek = e.webkitCompassHeading; // iOS fallback
+  } else if (e.alpha !== null) {
+    hoek = e.alpha;
+  }
+  kompasTeekenen(hoek);
+}
+
+function kompasTeekenen(hoek) {
+  const c = document.getElementById('kompas-canvas');
+  if (!c) return;
+  const cx = c.getContext('2d');
+  const midden = 22;
+  const donker = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  cx.clearRect(0, 0, 44, 44);
+
+  // Buitenring
+  cx.beginPath();
+  cx.arc(midden, midden, 20, 0, 2 * Math.PI);
+  cx.strokeStyle = donker ? '#555' : '#ccc';
+  cx.lineWidth = 1.5;
+  cx.stroke();
+
+  // Pijl roteren — pijl wijst naar noord
+  const rad = (-hoek) * Math.PI / 180;
+  cx.save();
+  cx.translate(midden, midden);
+  cx.rotate(rad);
+
+  // Rood deel (noord)
+  cx.beginPath();
+  cx.moveTo(0, -16);
+  cx.lineTo(5, 0);
+  cx.lineTo(-5, 0);
+  cx.closePath();
+  cx.fillStyle = '#c0392b';
+  cx.fill();
+
+  // Wit deel (zuid)
+  cx.beginPath();
+  cx.moveTo(0, 16);
+  cx.lineTo(5, 0);
+  cx.lineTo(-5, 0);
+  cx.closePath();
+  cx.fillStyle = donker ? '#888' : '#aaa';
+  cx.fill();
+
+  cx.restore();
+
+  // N label
+  cx.fillStyle = '#c0392b';
+  cx.font = 'bold 9px Arial';
+  cx.textAlign = 'center';
+  cx.textBaseline = 'middle';
+  // N positie volgt de rotatie mee
+  const nx = midden + Math.sin(-rad) * -13;  // correct: sin voor x, cos voor y bij rotatie
+  const ny = midden - Math.cos(-rad) * 13;   // wacht, simpeler:
+  // Vaste N bovenaan de pijl:
+  cx.fillText('N', midden + Math.sin(rad) * -13, midden - Math.cos(rad) * 13);
+}
+
+  function lijnGeraakt(px, py) {
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    let dichtstbij = -1, minAfstand = 30;
+    (put.aansluitingen || []).forEach((a, i) => {
+      const rad = (a.hoek - 90) * Math.PI / 180;
+      const lijnLengte = putStraal * 1.7;
+      const x1 = midden.x + Math.cos(rad) * putStraal;
+      const y1 = midden.y + Math.sin(rad) * putStraal;
+      const x2 = midden.x + Math.cos(rad) * (putStraal + lijnLengte);
+      const y2 = midden.y + Math.sin(rad) * (putStraal + lijnLengte);
+      const d = puntNaarLijnAfstand(px, py, x1, y1, x2, y2);
+      if (d < minAfstand) { minAfstand = d; dichtstbij = i; }
+    });
+    return dichtstbij;
+  }
+
+  function puntNaarLijnAfstand(px, py, x1, y1, x2, y2) {
+    const dx = x2-x1, dy = y2-y1;
+    const l2 = dx*dx + dy*dy;
+    if (l2 === 0) return Math.hypot(px-x1, py-y1);
+    const t = Math.max(0, Math.min(1, ((px-x1)*dx + (py-y1)*dy) / l2));
+    return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+  }
+
+  function canvasCoords(e, isTouch) {
+    const rect = canvas.getBoundingClientRect();
+    const src  = isTouch ? e.touches[0] : e;
+    return {
+      x: (src.clientX - rect.left) * (canvas.width / rect.width),
+      y: (src.clientY - rect.top)  * (canvas.height / rect.height)
+    };
+  }
+
+  function hoekVanMidden(px, py) {
+    let hoek = Math.atan2(py - midden.y, px - midden.x) * 180 / Math.PI + 90;
+    if (hoek < 0) hoek += 360;
+    return hoek % 360;
+  }
+
+let touchStartPos    = null;
+let sleepBevestigd   = false;
+let longPressTimer   = null;
+let vorigeHoek       = null;
+let undoTimer        = null;
+
+function onTouchStart(e) {
+  const c       = canvasCoords(e, true);
+  const geraakt = lijnGeraakt(c.x, c.y);
+  sleepTijd      = Date.now();
+  touchStartPos  = c;
+  sleepBevestigd = false;
+  sleepIdx       = geraakt;
+
+  if (longPressTimer) clearTimeout(longPressTimer);
+
+  if (sleepIdx >= 0) {
+    // Bewaar huidige hoek voor undo
+    vorigeHoek = app.projecten[app.actiefIdx].putten[actiefPutIdx].aansluitingen[sleepIdx].hoek;
+
+    longPressTimer = setTimeout(() => {
+      // Long press geactiveerd: start sleep-modus
+      sleepBevestigd = true;
+      canvas.classList.add('sleep-actief');
+      if (navigator.vibrate) navigator.vibrate(30);
+      // Visuele feedback: herteken met dikke markering
+      putCanvasTekenenMetMarkering(sleepIdx);
+    }, 450);
+  } else {
+    sleepIdx = -1;
+  }
+}
+
+function onTouchMove(e) {
+  if (sleepIdx < 0) return;
+
+  const c  = canvasCoords(e, true);
+  const dx = c.x - touchStartPos.x;
+  const dy = c.y - touchStartPos.y;
+  const bewogen = Math.hypot(dx, dy);
+
+  if (!sleepBevestigd) {
+    if (bewogen > 10) {
+      // Vinger bewoog te snel → annuleer long press, behandel als scroll
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      sleepIdx = -1;
+    }
+    return;
+  }
+
+  // Sleep-modus actief
+  e.preventDefault();
+  app.projecten[app.actiefIdx].putten[actiefPutIdx].aansluitingen[sleepIdx].hoek = hoekVanMidden(c.x, c.y);
+  putCanvasTekenenMetMarkering(sleepIdx);
+}
+
+function onTouchEnd(e) {
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+
+  const duur    = Date.now() - sleepTijd;
+  const c       = e.changedTouches[0];
+  const rect    = canvas.getBoundingClientRect();
+  const cx      = (c.clientX - rect.left) * (canvas.width / rect.width);
+  const cy      = (c.clientY - rect.top)  * (canvas.height / rect.height);
+  const bewogen = touchStartPos ? Math.hypot(cx - touchStartPos.x, cy - touchStartPos.y) : 999;
+
+  if (sleepIdx >= 0 && !sleepBevestigd && duur < 200 && bewogen < 10) {
+    // Korte tik → open aansluiting
+    aansluitingBewerken(sleepIdx);
+  } else if (sleepIdx >= 0 && sleepBevestigd) {
+    // Einde sleep → opslaan + undo-knop
+    opslaan();
+    toonUndoKnop(sleepIdx, vorigeHoek);
+  }
+
+  canvas.classList.remove('sleep-actief');
+  putCanvasTekenen(); // herteken zonder markering
+  sleepIdx       = -1;
+  sleepBevestigd = false;
+  touchStartPos  = null;
+}
+
+// Hertekent canvas met een visuele markering op de actieve lijn
+function putCanvasTekenenMetMarkering(actieveIdx) {
+  putCanvasTekenen(); // normale tekening
+  if (!canvas || actieveIdx < 0) return;
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const a   = put.aansluitingen[actieveIdx];
+  const rad = (a.hoek - 90) * Math.PI / 180;
+  const ll  = putStraal * 1.7;
+  const x1  = midden.x + Math.cos(rad) * putStraal;
+  const y1  = midden.y + Math.sin(rad) * putStraal;
+  const x2  = midden.x + Math.cos(rad) * (putStraal + ll);
+  const y2  = midden.y + Math.sin(rad) * (putStraal + ll);
+
+  // Glow/highlight over de bestaande lijn
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = '#ed6f26';
+  ctx.lineWidth   = (lijnDikte(a.diam) || 3) + 6;
+  ctx.globalAlpha = 0.45;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// Toont 4 seconden een "Ongedaan maken"-knop
+function toonUndoKnop(idx, oudeHoek) {
+  // Verwijder eventuele bestaande knop
+  const bestaand = document.getElementById('undo-sleep-knop');
+  if (bestaand) bestaand.remove();
+  if (undoTimer) clearTimeout(undoTimer);
+
+  const knop = document.createElement('button');
+  knop.id          = 'undo-sleep-knop';
+  knop.textContent = '↩ Ongedaan maken';
+  knop.style.cssText = [
+    'position:fixed', 'bottom:68px', 'left:50%',
+    'transform:translateX(-50%)',
+    'background:#ed6f26', 'color:#fff',
+    'border:none', 'border-radius:8px',
+    'padding:10px 20px', 'font-size:0.9rem',
+    'font-weight:600', 'z-index:300',
+    'cursor:pointer', 'box-shadow:0 2px 8px rgba(0,0,0,0.25)'
+  ].join(';');
+
+  knop.onclick = () => {
+    app.projecten[app.actiefIdx].putten[actiefPutIdx].aansluitingen[idx].hoek = oudeHoek;
+    opslaan();
+    putCanvasTekenen();
+    knop.remove();
+    if (undoTimer) clearTimeout(undoTimer);
+    toonMelding('Hoek teruggezet ✓');
+  };
+
+  document.body.appendChild(knop);
+  undoTimer = setTimeout(() => { knop.remove(); }, 4000);
+}
+
+  function onMouseDown(e) {
+    const c = canvasCoords(e, false);
+    sleepIdx = lijnGeraakt(c.x, c.y);
+    sleepTijd = Date.now();
+  }
+
+  function onMouseMove(e) {
+    if (sleepIdx < 0 || sleepIdx === null) return;
+    const c = canvasCoords(e, false);
+    app.projecten[app.actiefIdx].putten[actiefPutIdx].aansluitingen[sleepIdx].hoek = hoekVanMidden(c.x, c.y);
+    putCanvasTekenen();
+  }
+
+function onMouseUp() {
+  const duur = Date.now() - sleepTijd;
+  if (sleepIdx >= 0 && duur < 200) {
+    aansluitingBewerken(sleepIdx);
+  } else if (sleepIdx >= 0) {
+    opslaan();
+    putCanvasTekenen(); // ← was vergeten
+  }
+  sleepIdx = -1;
+}
+
+  // =====================
+  // AANSLUITING
+  // =====================
+  function srKiezen(waarde) {
+    document.getElementById('a-stroom').value = waarde;
+    document.querySelectorAll('.sr-knop').forEach(b => b.classList.remove('btn-oranje'));
+    const map = { '': 'sr-leeg', 'naar-deze': 'sr-naar-deze', 'naar-volgende': 'sr-naar-volgende' };
+    if (map[waarde]) document.getElementById(map[waarde]).classList.add('btn-oranje');
+  }
+
+  function aansluitingBewerken(idx) {
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    const a = put.aansluitingen[idx];
+    document.getElementById('a-idx').value               = idx;
+    document.getElementById('aansluiting-titel').textContent = `Aansluiting ${idx + 1}`;
+    document.getElementById('a-bob').value               = a.bob || '';
+    document.getElementById('a-bbb').value               = a.bbb || '';
+    document.getElementById('a-diam').value              = a.diam || '';
+    document.getElementById('a-vorm').value              = a.vorm || '';
+    document.getElementById('a-mat').value               = a.mat || '';
+    document.getElementById('a-opmerking').value         = a.opmerking || '';
+    document.getElementById('a-stroom').value            = a.stroom || '';
+    document.getElementById('a-diam-voorstel').style.display = 'none';
+    srKiezen(a.stroom || '');
+    if (a.bob && a.bbb) aansluiting_berekenDiam();
+    document.getElementById('card-aansluiting').style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('card-aansluiting').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
+  function aansluiting_berekenDiam() {
+    const bob = parseFloat(document.getElementById('a-bob').value);
+    const bbb = parseFloat(document.getElementById('a-bbb').value);
+    const el  = document.getElementById('a-diam-voorstel');
+    const sel = document.getElementById('a-diam');
+    if (!isNaN(bob) && !isNaN(bbb) && bob > bbb) {
+      const mm = (bob - bbb) * 10;
+      const diam = dichtstbijzijndeDiam(mm);
+      el.style.display = 'block';
+      el.textContent = `BOB − BBB = ${bob - bbb} cm → voorstel: ${diam} mm`;
+      sel.value = String(diam);
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+function aansluitingOpslaan() {
+    const idx = parseInt(document.getElementById('a-idx').value);
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    put.aansluitingen[idx] = {
+      ...put.aansluitingen[idx],
+      bob:       document.getElementById('a-bob').value,
+      bbb:       document.getElementById('a-bbb').value,
+      diam:      document.getElementById('a-diam').value,
+      vorm:      document.getElementById('a-vorm').value,
+      mat:       document.getElementById('a-mat').value,
+      opmerking: document.getElementById('a-opmerking').value,
+      stroom:    document.getElementById('a-stroom').value
+    };
+    opslaan();
+    document.getElementById('card-aansluiting').style.display = 'none';
+    putCanvasTekenen();
+    setTimeout(() => {
+      document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  }
+
+  function aansluitingAnnuleren() {
+    document.getElementById('card-aansluiting').style.display = 'none';
+    document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // =====================
+  // FOTO'S
+  // =====================
+async function fotoMaken() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => { _gps = { lat: pos.coords.latitude.toFixed(6), lon: pos.coords.longitude.toFixed(6), acc: Math.round(pos.coords.accuracy) }; },
+      ()  => { _gps = null; },
+      { enableHighAccuracy: true, timeout: 6000 }
+    );
+  }
+
+  // Herstel opgeslagen map-handle als permissie nog niet actief is
+  if (FSA_ONDERSTEUND && !fotoMapHandle) {
+    const opgeslagen = await handleOphalenDB();
+    if (opgeslagen) {
+      const status = await opgeslagen.requestPermission({ mode: 'readwrite' });
+      if (status === 'granted') {
+        fotoMapHandle = opgeslagen;
+      }
+    }
+  }
+
+  const inp = document.getElementById('camera-input');
+  inp.value = '';
+  setTimeout(() => inp.click(), 50);
+}
+
+document.getElementById('camera-input').addEventListener('change', async function() {
+  const file = this.files[0];
+  if (!file) return;
+  const project = app.projecten[app.actiefIdx];
+  const put     = project.putten[actiefPutIdx];
+  const nr      = (put.fotos ? put.fotos.length : 0) + 1;
+  const naam    = fotoNaam(put.id, project.init, nr);  // ← initialen toegevoegd (zie punt 5)
+
+  try {
+    const data = await comprimeerFoto(file);
+
+    if (FSA_ONDERSTEUND && !fotoMapHandle) {
+      // Eerste gebruik: vraag map te kiezen
+      toonMelding('Kies éénmalig een map voor foto-opslag…', 4000);
+      await fotoMapKiezen();
+    }
+
+    if (FSA_ONDERSTEUND && fotoMapHandle) {
+      await fotoSchrijvenNaarMap(naam, data);
+      if (!put.fotos) put.fotos = [];
+      put.fotos.push({ naam, gps: _gps, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
+    } else {
+      if (!db) { alert('Database niet beschikbaar.'); return; }
+      await fotoOpslaanDB(naam, data);
+      if (!put.fotos) put.fotos = [];
+      put.fotos.push({ naam, data, gps: _gps, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
+    }
+
+    _gps = null;
+    opslaan();
+    fotoGridTekenen();
+    toonMelding(`Foto ${nr} opgeslagen ✓`);
+  } catch(e) {
+    alert('Foto fout: ' + (e && e.message ? e.message : JSON.stringify(e)));
+  }
+  this.value = '';
+});
+
+function fotoGridTekenen() {
+  if (actiefPutIdx === null || app.actiefIdx === null) return;
+  const el = document.getElementById('d-foto-teller');
+  if (!el) return;
+  const put   = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const fotos = put.fotos || [];
+  el.textContent = `${fotos.length} foto${fotos.length !== 1 ? "'s" : ''}`;
+  const knop = document.getElementById('btn-foto');
+  knop.className = fotos.length === 0 ? 'btn btn-gevaar' : 'btn btn-oranje';
+
+  // Laad fotos asynchroon en render zodra data beschikbaar is
+  const grid = document.getElementById('foto-grid');
+  grid.innerHTML = fotos.map((f, i) => `
+    <div class="foto-thumb" id="thumb-${i}">
+      <img src="" alt="${f.naam}" id="thumb-img-${i}" style="opacity:0">
+      <span class="foto-nr">${f.volgnummer}</span>
+      <button class="foto-del" onclick="fotoVerwijderen(${i})">✕</button>
+    </div>
+  `).join('');
+
+  fotos.forEach(async (f, i) => {
+    let src = f.data || null;
+    if (!src && FSA_ONDERSTEUND && fotoMapHandle) {
+      src = await fotoLezenUitMap(f.naam);
+    }
+    if (!src && db) {
+      src = await fotoOphalenDB(f.naam);
+    }
+    if (src) {
+      const img = document.getElementById(`thumb-img-${i}`);
+      if (img) { img.src = src; img.style.opacity = '1'; }
+    }
+  });
+}
+
+async function fotoVerwijderen(idx) {
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  if (!confirm(`Foto ${put.fotos[idx].volgnummer} verwijderen?`)) return;
+  const naam = put.fotos[idx].naam;
+  // Verwijder uit map én uit IndexedDB (beide pogen, fouten negeren)
+  if (FSA_ONDERSTEUND && fotoMapHandle) await fotoVerwijderenUitMap(naam);
+  fotoVerwijderenDB(naam);
+  put.fotos.splice(idx, 1);
+  const project = app.projecten[app.actiefIdx];
+  put.fotos.forEach((f, i) => { f.volgnummer = i + 1; f.naam = fotoNaam(put.id, project.init, i + 1); });
+  opslaan();
+  fotoGridTekenen();
+}
+
+  // =====================
+  // NAVIGATIE
+  // =====================
+  function toonScherm(id) {
+    document.querySelectorAll('.scherm').forEach(el => el.classList.remove('actief'));
+    document.getElementById(id).classList.add('actief');
+    window.scrollTo(0, 0);
+  }
+
+  function modalOpenen(id)  { document.getElementById(id).classList.add('actief'); }
+  function modalSluiten(id) { document.getElementById(id).classList.remove('actief'); }
+
+  // =====================
+  // OPSTARTEN
+  // =====================
+  laden();
+  
+  if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().then(granted => {
+    if (!granted) toonMelding('⚠ Opslag niet gegarandeerd — maak regelmatig een backup.');
+  });
+}
+
+dbOpenen().then(async () => {
+  document.getElementById('np-datum').value     = vandaag();
+  document.getElementById('np-initialen').value = initOphalen();
+  await fotoMapInitialiseren(); // haal opgeslagen map-handle op
+  fotoMapPadTonen();
+  if (app.actiefIdx !== null && app.projecten[app.actiefIdx]) {
+    projectOpenen(app.actiefIdx);
+  } else {
+    app.actiefIdx = null;
+    projectLijstTekenen();
+    toonScherm('s-projecten');
+  }
+}).catch(e => toonMelding('Database fout: ' + e));
+  
+  // =====================
+  // HTML EXPORT
+  // =====================
+  async function exporteerRapport() {
+    const project = app.projecten[app.actiefIdx];
+    if (!project) return;
+
+    toonMelding('Rapport wordt opgebouwd…', 8000);
+
+for (const put of project.putten) {
+  for (const f of (put.fotos || [])) {
+    if (!f.data && FSA_ONDERSTEUND && fotoMapHandle) {
+      f.data = await fotoLezenUitMap(f.naam);
+    }
+    if (!f.data && db) {
+      f.data = await fotoOphalenDB(f.naam);
+    }
+  }
+}
+
+    const offscreenCanvasses = {};
+    for (const put of project.putten) {
+      if (put.aansluitingen && put.aansluitingen.length > 0) {
+        const oc = document.createElement('canvas');
+        oc.width = 800; oc.height = 800;
+        const octx = oc.getContext('2d');
+        const ocStr = 800 * 0.18;
+        const ocMid = { x: 400, y: 400 };
+        const lijnKleurOC = (a) => (a.bob || a.diam || a.vorm || a.mat) ? '#111111' : '#c0392b';
+
+        octx.beginPath();
+        octx.arc(ocMid.x, ocMid.y, ocStr, 0, 2 * Math.PI);
+        octx.strokeStyle = '#555555';
+        octx.lineWidth = 5;
+        octx.stroke();
+
+        if (put.type) {
+          octx.fillStyle = '#111111';
+          octx.font = `bold ${Math.round(ocStr * 0.45)}px Arial`;
+          octx.textAlign = 'center';
+          octx.textBaseline = 'middle';
+          octx.fillText(put.type, ocMid.x, ocMid.y);
+        }
+
+        octx.fillStyle = '#ed6f26';
+        octx.font = `bold ${Math.round(ocStr * 0.35)}px Arial`;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.fillText('N', ocMid.x, ocMid.y - ocStr - 18);
+
+        put.aansluitingen.forEach((a, i) => {
+          const rad = (a.hoek - 90) * Math.PI / 180;
+          const ll  = ocStr * 1.2;
+          const x1 = ocMid.x + Math.cos(rad) * ocStr;
+          const y1 = ocMid.y + Math.sin(rad) * ocStr;
+          const x2 = ocMid.x + Math.cos(rad) * (ocStr + ll);
+          const y2 = ocMid.y + Math.sin(rad) * (ocStr + ll);
+          octx.beginPath();
+          octx.moveTo(x1, y1);
+          octx.lineTo(x2, y2);
+          octx.strokeStyle = lijnKleurOC(a);
+          octx.lineWidth = lijnDikte(a.diam);
+          octx.stroke();
+          const lx = ocMid.x + Math.cos(rad) * (ocStr + ll + 18);
+          const ly = ocMid.y + Math.sin(rad) * (ocStr + ll + 18);
+          octx.fillStyle = lijnKleurOC(a);
+          octx.font = `bold ${Math.round(ocStr * 0.38)}px Arial`;
+          octx.textAlign = 'center';
+          octx.textBaseline = 'middle';
+          octx.fillText(i + 1, lx, ly);
+          if (a.diam) {
+            const ix = ocMid.x + Math.cos(rad) * (ocStr + ll * 0.5) + Math.cos(rad + Math.PI/2) * 24;
+            const iy = ocMid.y + Math.sin(rad) * (ocStr + ll * 0.5) + Math.sin(rad + Math.PI/2) * 24;
+            octx.fillStyle = '#555555';
+            octx.font = `${Math.round(ocStr * 0.28)}px Arial`;
+            octx.textAlign = 'center';
+            octx.textBaseline = 'middle';
+            octx.fillText(`⌀${a.diam}`, ix, iy);
+          }
+
+          if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
+            const pijlAfstand = ocStr + ll * 0.3;
+            const px = ocMid.x + Math.cos(rad) * pijlAfstand + Math.cos(rad - Math.PI/2) * 24;
+            const py = ocMid.y + Math.sin(rad) * pijlAfstand + Math.sin(rad - Math.PI/2) * 24;
+            const pijlRad  = a.stroom === 'naar-deze' ? rad + Math.PI : rad;
+            const pijlSize = ocStr * 0.22;
+
+            octx.save();
+            octx.translate(px, py);
+            octx.rotate(pijlRad);
+            octx.beginPath();
+            octx.moveTo(pijlSize, 0);
+            octx.lineTo(-pijlSize, pijlSize * 0.5);
+            octx.lineTo(-pijlSize, -pijlSize * 0.5);
+            octx.closePath();
+            octx.fillStyle = '#1a6fc4';
+            octx.fill();
+            octx.restore();
+          }
+        });
+
+        offscreenCanvasses[put.id] = oc.toDataURL('image/png');
+      }
+    }
+
+    const datum = new Date().toLocaleDateString('nl-NL');
+    const puttenPerRij = 2;
+    let putHTML = '';
+
+    for (let r = 0; r < project.putten.length; r += puttenPerRij) {
+      const rij = project.putten.slice(r, r + puttenPerRij);
+      putHTML += `<div class="put-rij">`;
+      for (const put of rij) {
+        const algTekst = put.putAlgemeen || '';
+        let algHTML = '';
+        if (algTekst === 'Niet te openen, zit vast') {
+          algHTML = `<div class="alg rood">● Niet te openen, zit vast</div>`;
+        } else if (algTekst === 'Niet te vinden, onder maaiveld') {
+          algHTML = `<div class="alg rood">● Niet te vinden, onder maaiveld</div>`;
+        } else if (algTekst) {
+          algHTML = `<div class="alg">● Opmerking: ${algTekst}</div>`;
+        } else {
+          algHTML = `<div class="alg grijs">● —</div>`;
+        }
+
+        const fotoNamen = (put.fotos || []).map(f => f.naam).join(', ') || '—';
+        const heeftFotos = (put.fotos || []).length > 0;
+
+        let aanslHTML = '';
+        if (put.aansluitingen && put.aansluitingen.length > 0) {
+          aanslHTML += `<div class="cirkel-tabel-rij">`;
+          if (offscreenCanvasses[put.id]) {
+            aanslHTML += `<div class="cirkel-wrap"><img class="cirkel-img" src="${offscreenCanvasses[put.id]}"></div>`;
+          }
+          aanslHTML += `<div class="tabel-wrap"><table class="aansl-tabel">
+            <colgroup>
+              <col class="nr"><col class="bob"><col class="bbb">
+              <col class="diam"><col class="vorm"><col class="mat">
+            </colgroup>
+            <thead><tr><th>#</th><th>BOB</th><th>BBB</th><th>⌀</th><th>Vorm</th><th>Mat.</th></tr></thead>
+            <tbody>`;
+          put.aansluitingen.forEach((a, i) => {
+            aanslHTML += `<tr>
+              <td>${i+1}</td>
+              <td>${a.bob || '—'}</td>
+              <td>${a.bbb || '—'}</td>
+              <td>${a.diam || '—'}</td>
+              <td>${a.vorm || '—'}</td>
+              <td>${a.mat || '—'}</td>
+            </tr>`;
+            if (a.opmerking) {
+              aanslHTML += `<tr class="opm-rij"><td></td><td colspan="5">${a.opmerking}</td></tr>`;
+            }
+          });
+          aanslHTML += `</tbody></table></div></div>`;
+        } else {
+          aanslHTML = `<div class="grijs" style="font-size:12px;margin-top:4px;">Geen aansluitingen ingevuld</div>`;
+        }
+
+        putHTML += `<div class="put-blok">
+          <div class="put-kop">PUT ${put.id}${put.type ? ` <span class="type-tag">${put.type}</span>` : ''}</div>
+          ${algHTML}
+          <div class="foto-regel ${heeftFotos ? '' : 'grijs'}">📷 ${heeftFotos ? fotoNamen : 'Geen foto\'s'}</div>
+          ${aanslHTML}
+        </div>`;
+      }
+      putHTML += `</div>`;
+    }
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Rapport ${project.naam}</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm 6mm; }
+      body { font-family: Arial, sans-serif; font-size: 14px; color: #111; }
+      h1 { font-size: 18px; margin: 0 0 3px; color: #0f6434; }
+      .meta { font-size: 13px; color: #555; margin-bottom: 12px; border-bottom: 2px solid #0f6434; padding-bottom: 6px; }
+      .put-rij { display: flex; gap: 10px; margin-bottom: 12px; page-break-inside: avoid; align-items: stretch; }
+      .put-blok { flex: 0 0 calc(50% - 5px); max-width: calc(50% - 5px); border: 1px solid #ccc; border-radius: 6px; padding: 10px; box-sizing: border-box; }
+      .put-kop { font-size: 15px; font-weight: bold; color: #0f6434; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+      .type-tag { background: #e8f4ec; color: #0a4d27; border-radius: 4px; padding: 1px 6px; font-size: 12px; font-weight: 600; margin-left: 5px; }
+      .alg { font-size: 13px; margin-bottom: 4px; }
+      .alg.rood { color: #c0392b; font-weight: 600; }
+      .alg.grijs, .grijs { color: #999; }
+      .foto-regel { font-size: 12px; color: #555; word-break: break-all; margin-bottom: 6px; padding-top: 4px; border-top: 1px solid #eee; }
+      .cirkel-tabel-rij { display: flex; flex-direction: row; gap: 8px; align-items: flex-start; margin-top: 6px; }
+      .cirkel-wrap { flex: 0 0 240px; width: 240px; }
+      .cirkel-img { width: 240px; height: 240px; display: block; }
+      .tabel-wrap { flex: 1 1 0; min-width: 0; }
+      .aansl-tabel { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      .aansl-tabel th { background: #e8f4ec; padding: 3px 4px; text-align: left; border: 1px solid #ccc; font-size: 13px; white-space: nowrap; color: #0a4d27; }
+      .aansl-tabel td { padding: 3px 4px; border: 1px solid #eee; vertical-align: top; font-size: 13px; word-break: break-word; }
+      .aansl-tabel tr:nth-child(even) td { background: #fafafa; }
+      .aansl-tabel col.nr   { width: 20px; }
+      .aansl-tabel col.bob  { width: 36px; }
+      .aansl-tabel col.bbb  { width: 36px; }
+      .aansl-tabel col.diam { width: 36px; }
+      .aansl-tabel col.vorm { width: 42px; }
+      .aansl-tabel col.mat  { width: 52px; }
+	  .opm-rij td { color: #444; font-style: italic; padding: 3px 5px 6px 14px; border-top: none; font-size: 13px; }
+    </style></head><body>
+    <h1>${project.naam}</h1>
+    <div class="meta">Medewerker: ${project.init} &nbsp;|&nbsp; Datum: ${project.datum} &nbsp;|&nbsp; Export: ${datum} &nbsp;|&nbsp; Putten: ${project.putten.length}</div>
+    ${putHTML}
+    </body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+	const bestandsnaam = `Putten_${project.naam.replace(/\s+/g,'_').replace(/\//g,'-')}_${project.init}.html`;
+    const file = new File([blob], bestandsnaam, { type: 'text/html' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: project.naam });
+        toonMelding('Rapport gedeeld ✓');
+      } catch(e) {
+        if (e.name !== 'AbortError') {
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          setTimeout(() => URL.revokeObjectURL(url), 30000);
+        }
+      }
+    } else {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      toonMelding('Rapport geopend ✓');
+    }
+  }
+  
+  
+</script>
+
+  <!-- Service Worker registratie -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js')
+          .then(function(reg) {
+            reg.addEventListener('updatefound', function() {
+              var sw = reg.installing;
+              sw.addEventListener('statechange', function() {
+                if (sw.state === 'activated') {
+                  console.log('Putten Inmeten bijgewerkt.');
+                }
+              });
+            });
+          })
+          .catch(function(err) { console.warn('SW mislukt:', err); });
+      });
+    }
+  </script>
+</body>
+</html>
