@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v1.1</title>
+  <title>Putten Inmeten v1.2</title>
 <style>
 :root {
       --bg:           #ffffff;
@@ -359,8 +359,8 @@
     .radio-groep {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
+      gap: 1px;
+      margin-bottom: 6px;
     }
 
     .radio-optie {
@@ -479,6 +479,10 @@
     <h2>Bestaande projecten</h2>
     <div id="project-lijst"></div>
   </div>
+  
+    <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
+    Putten Inmeten · Patrick Duteweerd · 2026
+  </div>
 </div>
 
 <!-- SCHERM: PUTTEN LIJST -->
@@ -567,9 +571,9 @@
         <select id="m-type" onchange="typePutGewijzigd()">
           <option value="">— kies —</option>
           <option value="GWA">GWA</option>
-          <option value="DWA">DWA</option>
-          <option value="HWA">HWA</option>
-          <option value="ITR">ITR</option>
+          <option value="DWA">DWA (VW)</option>
+          <option value="HWA">HWA (RW)</option>
+          <option value="ITR">ITR (IW)</option>
           <option value="DRAIN">DRAIN</option>
         </select>
       </div>
@@ -591,7 +595,7 @@
 </div>
 
     <div style="font-size:0.78rem;color:var(--subtekst);margin-top:6px;display:none;" id="tekening-uitleg">
-      Sleep een lijn om te verplaatsen · Tik op een lijn om waarden in te vullen
+      Houd een lijn vast om deze te verplaatsen<br>Tik op een lijn om eigenschappen in te vullen
     </div>
   </div>
 
@@ -637,7 +641,7 @@
         <label>Materiaal</label>
         <select id="a-mat">
           <option value="">— kies —</option>
-          <option>Beton</option><option>PVC</option><option>Ribbel</option><option>Beton + Reline</option>
+          <option>Beton</option><option>PVC</option><option>Ribbel</option><option>Beton + Reline</option><option>Keramiek</option>
         </select>
       </div>
     </div>
