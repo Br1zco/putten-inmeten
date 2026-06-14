@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten</title>
+  <title>Putten Inmeten v1.1</title>
 <style>
 :root {
       --bg:           #ffffff;
@@ -359,7 +359,7 @@
     .radio-groep {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 6px;
       margin-bottom: 12px;
     }
 
@@ -403,7 +403,33 @@
       padding: 8px 12px;
     }
 
-    /* ======= PUT TEKENING ======= */
+    /* ======= PROJECT LIJST KNOPPEN ======= */
+    .btn-verwijder {
+      width: 28px; height: 28px; min-width: 28px;
+      border-radius: 50%;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+    .btn-potlood {
+      width: 28px; height: 28px; min-width: 28px;
+      border-radius: 50%;
+      background: var(--bg-2);
+      border: 1px solid var(--rand);
+      font-size: 15px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+    .verzonden-icons { font-size: 0.8rem; margin-left: 4px; }
+
+/* ======= PUT TEKENING ======= */
     .put-canvas-wrap {
       position: relative;
       width: 100%;
@@ -441,7 +467,7 @@
   <div class="card">
     <h2>Nieuw project</h2>
     <label>Projectnaam</label>
-    <input type="text" id="np-naam" placeholder="bijv. Barkenkamp Groenlo" oninput="hoofdlettersPerWoord(this)">
+    <input type="text" id="np-naam" placeholder="bijv. LB10261805 Groenlo Barkenkamp" oninput="hoofdlettersPerWoord(this)">
     <label>Initialen</label>
     <input type="text" id="np-initialen" placeholder="bijv. PD" oninput="naarHoofdletters(this)" maxlength="6">
     <label>Datum</label>
@@ -462,10 +488,16 @@
     <button class="btn btn-small" onclick="naarProjecten()">← Terug</button>
   </div>
 
-  <div class="card">
-	<div class="lijst-item-naam" id="putten-project-naam" style="font-size:1.4rem;color:var(--accent);font-weight:700;"></div>
+<div class="card" style="display:flex;align-items:flex-end;justify-content:space-between;">
+  <div>
+    <div class="lijst-item-naam" id="putten-project-naam" style="font-size:1.4rem;color:var(--accent);font-weight:700;"></div>
     <div class="lijst-item-meta" id="putten-project-meta" style="font-size:0.95rem;margin-top:3px;"></div>
   </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+    <button class="btn-potlood" onclick="projectNaamWijzigen(app.actiefIdx)" title="Naam aanpassen">✏️</button>
+    <button class="btn-verwijder" onclick="projectVerwijderenDirect(app.actiefIdx)" title="Verwijderen">✕</button>
+  </div>
+</div>
 
   <div class="card">
     <h2>Put toevoegen</h2>
@@ -481,7 +513,7 @@
 
 <div class="card">
     <h2>Exporteren</h2>
-    <button class="btn btn-primair" onclick="exporteerRapport()">📤 Deel rapport</button>
+    <button class="btn btn-primair" onclick="exporteerRapport()">🚀 Deel rapport</button>
     <button class="btn" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
     <div id="fotomap-pad" style="font-size:0.78rem;color:var(--subtekst);margin-top:5px;padding-left:4px;"></div>
   </div>
@@ -962,12 +994,15 @@ async function fotoVerwijderenUitMap(naam) {
     }
     el.innerHTML = [...app.projecten.keys()].reverse().map(i => {
       const p = app.projecten[i];
+      const vIcons = p.verzonden ? '<span class="verzonden-icons">' + '🚀'.repeat(p.verzonden) + '</span>' : '';
       return `<div class="lijst-item">
-        <div>
-          <div class="lijst-item-naam">${p.naam}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="lijst-item-naam">${p.naam}${vIcons}</div>
           <div class="lijst-item-meta">${p.init} · ${p.datum} · ${p.putten.length} put(ten)</div>
         </div>
-        <button class="btn btn-oranje btn-small" onclick="projectOpenenOfBekijken(${i})">Open</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-oranje btn-small" onclick="projectOpenen(${i})">Open</button>
+        </div>
       </div>`;
     }).join('');
   }
@@ -998,6 +1033,30 @@ async function fotoVerwijderenUitMap(naam) {
       puttenLijstTekenen();
       toonScherm('s-putten');
     });
+  }
+
+  function projectNaamWijzigen(idx) {
+    const p = app.projecten[idx];
+    const nieuw = prompt('Nieuwe projectnaam:', p.naam);
+    if (nieuw && nieuw.trim() && nieuw.trim() !== p.naam) {
+      p.naam = nieuw.trim();
+      opslaan();
+      projectLijstTekenen();
+	  document.getElementById('putten-project-naam').textContent = p.naam;
+    }
+  }
+
+  function projectVerwijderenDirect(idx) {
+    const p = app.projecten[idx];
+    if (!confirm(`Project "${p.naam}" definitief verwijderen?`)) return;
+    for (const put of p.putten)
+      for (const f of (put.fotos || [])) fotoVerwijderenDB(f.naam);
+    app.projecten.splice(idx, 1);
+    if (app.actiefIdx === idx) app.actiefIdx = null;
+    else if (app.actiefIdx > idx) app.actiefIdx--;
+    opslaan();
+    projectLijstTekenen();
+	naarProjecten();
   }
 
   function projectVerwijderen() {
@@ -2126,6 +2185,7 @@ for (const put of project.putten) {
       try {
         await navigator.share({ files: [file], title: project.naam });
         toonMelding('Rapport gedeeld ✓');
+        project.verzonden = (project.verzonden || 0) + 1; opslaan();
       } catch(e) {
         if (e.name !== 'AbortError') {
           const url = URL.createObjectURL(blob);
@@ -2138,6 +2198,7 @@ for (const put of project.putten) {
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 30000);
       toonMelding('Rapport geopend ✓');
+      project.verzonden = (project.verzonden || 0) + 1; opslaan();
     }
   }
   
