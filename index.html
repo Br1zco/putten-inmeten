@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.0beta</title>
+  <title>Putten Inmeten v2.1</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   
@@ -490,7 +490,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten · Patrick Duteweerd · 2026
+    Putten Inmeten v2.1 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -2853,22 +2853,31 @@ const url = URL.createObjectURL(blob);
 
   <!-- Service Worker registratie -->
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js')
-          .then(function(reg) {
-            reg.addEventListener('updatefound', function() {
-              var sw = reg.installing;
-              sw.addEventListener('statechange', function() {
-                if (sw.state === 'activated') {
-                  console.log('Putten Inmeten bijgewerkt.');
-                }
-              });
-            });
-          })
-          .catch(function(err) { console.warn('SW mislukt:', err); });
-      });
-    }
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(function(err) { console.warn('SW mislukt:', err); });
+
+    navigator.serviceWorker.addEventListener('message', function(event) {
+      if (event.data?.type === 'BIJGEWERKT') {
+        const banner = document.createElement('div');
+        banner.style.cssText = [
+          'position:fixed', 'bottom:20px', 'left:50%',
+          'transform:translateX(-50%)',
+          'background:#0f6434', 'color:#fff',
+          'border-radius:10px', 'padding:12px 20px',
+          'font-size:0.95rem', 'font-weight:600',
+          'z-index:999', 'cursor:pointer',
+          'box-shadow:0 3px 12px rgba(0,0,0,0.3)',
+          'text-align:center', 'max-width:calc(100% - 32px)'
+        ].join(';');
+        banner.textContent = '🔄 App bijgewerkt — tik om te verversen';
+        banner.onclick = () => window.location.reload();
+        document.body.appendChild(banner);
+      }
+    });
+  });
+}
   </script>
 </body>
 </html>

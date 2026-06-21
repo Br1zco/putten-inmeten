@@ -1,5 +1,5 @@
 // ─── Versie: verhoog dit getal bij elke nieuwe deploy ───────────────────────
-const VERSIE = 'putten-v2.0';
+const VERSIE = 'putten-v2.1';
 
 // Basis-URL werkt automatisch op elke GitHub Pages submap
 const BASE = new URL('./', self.location).href;
@@ -34,6 +34,11 @@ self.addEventListener('activate', event => {
         )
       )
       .then(() => self.clients.claim())
+      .then(() => {
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => client.postMessage({ type: 'BIJGEWERKT', versie: VERSIE }));
+        });
+      })
   );
 });
 
