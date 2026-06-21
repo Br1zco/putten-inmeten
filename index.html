@@ -11,7 +11,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v1.2</title>
+  <title>Putten Inmeten v2.0beta</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
+  
 <style>
 :root {
       --bg:           #ffffff;
@@ -452,6 +455,12 @@
       pointer-events: none;
     }
 
+/* Overstort plaatsing overlay */
+.overstort-instructie {
+  background: var(--accent-licht); color: var(--accent-tekst);
+  border-radius: 8px; padding: 10px 12px; font-size: 0.88rem;
+  font-weight: 600; margin-top: 8px; display: none; text-align: center;
+}
   </style>
 </head>
 <body>
@@ -515,6 +524,11 @@
     <div id="putten-lijst"></div>
   </div>
 
+  <!-- TERUG KNOP MIDDEN -->
+  <div style="margin-bottom:12px;">
+	<button class="btn" onclick="naarProjecten()">← Terug naar projecten</button>
+  </div>
+
 <div class="card">
     <h2>Exporteren</h2>
     <button class="btn btn-primair" onclick="exporteerRapport()">🚀 Deel rapport</button>
@@ -534,10 +548,13 @@
   <div class="card">
     <div class="put-detail-kop">
       <div class="put-detail-id" id="d-put-id"></div>
-      <div class="foto-teller-kop" id="d-foto-teller"></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+      <button class="btn-potlood" onclick="putIdWijzigen()" title="ID aanpassen">✏️</button>
+      <button class="btn-verwijder" onclick="detailPutVerwijderen()" title="Verwijderen">✕</button>
     </div>
+  </div>
     <div class="lijst-item-meta" id="d-put-project" style="margin-bottom:10px;"></div>
-    <button class="btn btn-rood" id="btn-foto" onclick="fotoMaken()">📷 Foto maken</button>
+	<button class="btn btn-gevaar" id="btn-foto" onclick="fotoMaken()">📷 Foto maken</button>
     <div class="foto-grid" id="foto-grid"></div>
   </div>
 
@@ -587,9 +604,15 @@
 
 <div class="put-canvas-wrap" id="card-tekening" style="display:none;position:relative;">
   <canvas id="put-canvas"></canvas>
-  <div id="kompas-wrap" style="position:absolute;top:8px;left:8px;width:44px;height:44px;display:none;">
-    <canvas id="kompas-canvas" width="44" height="44"></canvas>
-    <div style="font-size:0.6rem;color:var(--subtekst);text-align:center;margin-top:1px;">kompas</div>
+  <div id="kompas-wrap" style="position:absolute;top:8px;left:8px;display:flex;flex-direction:row;align-items:center;gap:6px;">
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <canvas id="kompas-canvas" width="44" height="44"></canvas>
+      <div style="font-size:0.6rem;color:var(--subtekst);text-align:center;margin-top:1px;">kompas</div>
+    </div>
+    <div id="noord-pijl-ui" style="display:flex;flex-direction:column;align-items:center;font-weight:700;color:#ed6f26;font-size:1.5rem;line-height:1;">
+  <span>↑</span>
+  <span style="font-size:1.1rem;">N</span>
+</div>
   </div>
   <div style="font-size:0.78rem;color:var(--subtekst);margin:10px 0 4px;text-align:center;" id="noord-label" style="display:none;"></div>
 </div>
@@ -599,8 +622,17 @@
     </div>
   </div>
 
+<!-- OVERSTORT KNOP -->
+<div class="btn-rij" style="margin-top:10px;margin-bottom:12px;">
+  <button class="btn btn-primair" id="btn-overstort" onclick="overstortActie()" style="display:none;">💧 Overstort toevoegen</button>
+  <button class="btn" onclick="naarPuttenLijst()">← Terug naar lijst</button>
+</div>
+<div class="overstort-instructie" id="overstort-instructie">
+  Tik op een aansluitingslijn voor een overstort <em>tussen putten</em>, of tik in het midden van de put voor een overstort <em>in deze put</em>
+</div>
+
   <!-- AANSLUITING INVULLEN (inline) -->
-  <div class="card" id="card-aansluiting" style="display:none;">
+  <div class="card" id="card-aansluiting" style="display:none;margin-top:12px;">
     <h2 id="aansluiting-titel">Aansluiting</h2>
     <input type="hidden" id="a-idx">
 	<input type="hidden" id="a-stroom">
@@ -661,20 +693,45 @@
       <button class="btn btn-primair" onclick="aansluitingOpslaan()">Opslaan</button>
     </div>
   </div>
+  
+  <!-- OVERSTORT INVULLEN -->
+<div class="card" id="card-overstort" style="display:none;margin-top:12px;">
+  <h2>Overstort</h2>
 
-  <!-- TERUG KNOP MIDDEN -->
-  <div style="margin-bottom:12px;">
-    <button class="btn" onclick="naarPuttenLijst()">← Terug naar lijst</button>
+  <label>Gekoppelde put</label>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <select id="ov-koppelput" style="flex:1;" onchange="overstortKoppelputGewijzigd()">
+      <option value="">— geen / in deze put —</option>
+    </select>
+  </div>
+  <div id="ov-nieuwe-put-wrap" style="display:none;margin-top:6px;">
+    <input type="text" id="ov-nieuwe-put-id" placeholder="Nieuw put ID, bijv. G-1043">
+    <button class="btn btn-primair" onclick="overstortNieuwePutAanmaken()" style="margin-top:6px;">Put aanmaken &amp; koppelen</button>
   </div>
 
-  <!-- PUT ID -->
-  <div class="card">
-    <h2>Put ID aanpassen</h2>
-    <input type="text" id="d-bewerk-id">
-    <div class="btn-rij">
-      <button class="btn btn-gevaar" onclick="detailPutVerwijderen()">Put verwijderen</button>
-      <button class="btn btn-primair" onclick="detailPutIdOpslaan()">ID opslaan</button>
+  <div class="invoer-rij" style="margin-top:10px;">
+    <div>
+      <label>Drempelhoogte (cm)</label>
+      <input type="number" id="ov-hoogte" placeholder="bijv. 85" inputmode="decimal">
     </div>
+    <div>
+      <label>Drempelbreedte (cm)</label>
+      <input type="number" id="ov-breedte" placeholder="bijv. 200" inputmode="decimal">
+    </div>
+  </div>
+
+  <label>Materiaal</label>
+  <select id="ov-materiaal">
+    <option value="">— kies —</option>
+    <option>Beton</option><option>Anders, zie opm</option><option>Onbekend</option>
+  </select>
+
+  <label>Opmerking</label>
+  <textarea id="ov-opmerking" placeholder="Optioneel" rows="3" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--rand);background:var(--invoer-bg);color:var(--tekst);font-size:1rem;resize:none;font-family:inherit;"></textarea>
+
+  <div class="btn-rij" style="margin-top:10px;">
+    <button class="btn" onclick="overstortAnnuleren()">Annuleren</button>
+    <button class="btn btn-primair" onclick="overstortOpslaan()">Opslaan</button>
   </div>
 </div>
 
@@ -693,6 +750,7 @@
 
 <input type="file" id="camera-input" accept="image/*" capture="environment">
 
+
 <script>
   const DIAMS = [110,125,160,200,250,300,315,400,500,600,700,800,900,1000,1200,1250,1400,1500,1600,1800,2000,9999];
   const MAX_FOTO_BREEDTE = 1200;
@@ -700,12 +758,13 @@
   const FSA_ONDERSTEUND = ('showDirectoryPicker' in window);
   
   let fotoMapHandle = null; // FileSystemDirectoryHandle of null
-
   let app = { globalTeller: 0, projecten: [], actiefIdx: null };
   let actiefPutIdx    = null;
   let modalProjectIdx = null;
   let _gps            = null;
   let putLadenBezig   = false;
+  let overstortPlaatsModus = false;
+  let overstortJuistGeplaatst = false;
 
   // =====================
   // INDEXEDDB
@@ -1089,7 +1148,7 @@ async function fotoVerwijderenUitMap(naam) {
     const id = invoer || String(++app.globalTeller);
     const project = app.projecten[app.actiefIdx];
     if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
-    project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '' });
+	project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '', overstort: null });
     opslaan();
     document.getElementById('nieuwe-put-id').value = '';
     puttenLijstTekenen();
@@ -1098,10 +1157,10 @@ async function fotoVerwijderenUitMap(naam) {
 function putCompleet(put) {
     if (put.putAlgemeen === 'Niet te openen, zit vast' ||
         put.putAlgemeen === 'Niet te vinden, onder maaiveld') return true;
-    const heeftFoto    = (put.fotos || []).length > 0;
-    const heeftType    = !!put.type;
-    const heeftAansl   = (put.aansluitingen || []).some(a => a.bob && a.diam);
-    return heeftFoto && heeftType && heeftAansl;
+    const heeftFotos = (put.fotos || []).length >= 2;
+    const heeftType  = !!put.type;
+    const heeftAansl = (put.aansluitingen || []).some(a => a.bob);
+    return heeftFotos && heeftType && heeftAansl;
   }
 
   function puttenLijstTekenen() {
@@ -1117,6 +1176,7 @@ function putCompleet(put) {
       const fotoTag = n === 0
         ? '<span class="tag tag-rood">📷 0</span>'
         : `<span class="tag">📷 ${n}</span>`;
+	  const ovTag = put.overstort?.aanwezig ? '<span class="tag" style="background:#dce9f5;color:#185FA5;">💧</span>' : '';
       const compleet = putCompleet(put);
       const statusIcoon = compleet
         ? '<span style="color:#0f6434;font-size:1rem;margin-left:6px;">✓</span>'
@@ -1124,7 +1184,7 @@ function putCompleet(put) {
       const meta = [put.type || '', put.putAlgemeen ? `⚠ ${put.putAlgemeen}` : ''].filter(Boolean).join(' · ');
       return `<div class="lijst-item">
         <div style="flex:1">
-          <div class="lijst-item-naam">PUT ${put.id} ${fotoTag}${statusIcoon}</div>
+		  <div class="lijst-item-naam">PUT ${put.id} ${fotoTag}${ovTag}${statusIcoon}</div>
           ${meta ? `<div class="lijst-item-meta">${meta}</div>` : ''}
         </div>
         <button class="btn btn-oranje btn-small" style="margin-left:8px;" onclick="putDetailOpenen(${i})">Open</button>
@@ -1143,7 +1203,6 @@ function putCompleet(put) {
 
     document.getElementById('d-put-id').textContent      = `PUT ${put.id}`;
     document.getElementById('d-put-project').textContent = project.naam;
-    document.getElementById('d-bewerk-id').value         = put.id;
     document.getElementById('m-type').value              = put.type || '';
 
     // Put algemeen herstellen
@@ -1165,16 +1224,21 @@ function putCompleet(put) {
     if (put.aansluitingen && put.aansluitingen.length > 0) {
       document.getElementById('t-aantal').value = put.aansluitingen.length;
     document.getElementById('card-tekening').style.display = 'block';
+	document.getElementById('btn-overstort').style.display  = 'block';
     document.getElementById('noord-label').style.display = 'block';
+	document.getElementById('kompas-wrap').style.display = 'flex';
     document.getElementById('tekening-uitleg').style.display = 'block';
     setTimeout(() => { initCanvas(); putCanvasTekenen(); kompasStarten(); }, 80);
     } else {
       document.getElementById('card-tekening').style.display = 'none';
       document.getElementById('noord-label').style.display = 'none';
+	  document.getElementById('kompas-wrap').style.display = 'none';
       document.getElementById('tekening-uitleg').style.display = 'none';
+	  document.getElementById('btn-overstort').style.display  = 'none';
       document.getElementById('t-aantal').value = '';
     }
 
+    overstortKnopBijwerken();
     fotoGridTekenen();
     toonScherm('s-put-detail');
 	putLadenBezig = false;
@@ -1185,55 +1249,47 @@ function putCompleet(put) {
     puttenLijstTekenen();
     toonScherm('s-putten');
   }
-
-async function detailPutIdOpslaan() {
-  const nieuwId = document.getElementById('d-bewerk-id').value.trim();
-  if (!nieuwId) { alert('Put ID mag niet leeg zijn.'); return; }
+  
+  async function putIdWijzigen() {
   const project = app.projecten[app.actiefIdx];
-  if (project.putten.some((p, i) => p.id === nieuwId && i !== actiefPutIdx)) {
-    alert(`Put ID "${nieuwId}" bestaat al.`); return;
+  const put     = project.putten[actiefPutIdx];
+  const nieuwId = prompt('Nieuw put ID:', put.id);
+  if (!nieuwId || !nieuwId.trim() || nieuwId.trim() === put.id) return;
+  const schoon = nieuwId.trim();
+  if (project.putten.some((p, i) => p.id === schoon && i !== actiefPutIdx)) {
+    alert(`Put ID "${schoon}" bestaat al.`); return;
   }
 
-  const put = project.putten[actiefPutIdx];
-
-  // Hernoem bestanden in FSA-map
+  // Hernoem bestanden in FSA-map of IndexedDB
   if (FSA_ONDERSTEUND && fotoMapHandle && put.fotos) {
     for (let i = 0; i < put.fotos.length; i++) {
-      const oudeNaam  = put.fotos[i].naam;
-      const nieuweNaam = fotoNaam(nieuwId, project.init, i + 1);
+      const oudeNaam   = put.fotos[i].naam;
+      const nieuweNaam = fotoNaam(schoon, project.init, i + 1);
       try {
-        // Lees oud bestand, schrijf naar nieuwe naam, verwijder oude
         const data = await fotoLezenUitMap(oudeNaam);
-        if (data) {
-          await fotoSchrijvenNaarMap(nieuweNaam, data);
-          await fotoVerwijderenUitMap(oudeNaam);
-        }
-      } catch(e) {
-        toonMelding(`Hernoemen mislukt voor ${oudeNaam}`, 4000);
-      }
+        if (data) { await fotoSchrijvenNaarMap(nieuweNaam, data); await fotoVerwijderenUitMap(oudeNaam); }
+      } catch(e) { toonMelding(`Hernoemen mislukt voor ${oudeNaam}`, 4000); }
       put.fotos[i].naam = nieuweNaam;
       put.fotos[i].volgnummer = i + 1;
     }
   } else if (put.fotos) {
-    // IndexedDB: metadata bijwerken (bestanden hebben geen naam in IDB, key = naam)
     for (let i = 0; i < put.fotos.length; i++) {
       const oudeNaam   = put.fotos[i].naam;
-      const nieuweNaam = fotoNaam(nieuwId, project.init, i + 1);
+      const nieuweNaam = fotoNaam(schoon, project.init, i + 1);
       const data = await fotoOphalenDB(oudeNaam);
-      if (data) {
-        await fotoOpslaanDB(nieuweNaam, data);
-        await fotoVerwijderenDB(oudeNaam);
-      }
+      if (data) { await fotoOpslaanDB(nieuweNaam, data); await fotoVerwijderenDB(oudeNaam); }
       put.fotos[i].naam = nieuweNaam;
       put.fotos[i].volgnummer = i + 1;
     }
   }
 
-  put.id = nieuwId;
+  put.id = schoon;
   opslaan();
-  document.getElementById('d-put-id').textContent = `PUT ${nieuwId}`;
-  toonMelding('ID en bestandsnamen opgeslagen ✓');
+  document.getElementById('d-put-id').textContent = `PUT ${schoon}`;
+  toonMelding('ID opgeslagen ✓');
 }
+
+
 
   function detailPutVerwijderen() {
     const project = app.projecten[app.actiefIdx];
@@ -1285,10 +1341,15 @@ function typeAansluitingenOpslaan() {
   // =====================
   let canvas, ctx, putStraal, midden;
   let sleepIdx = null;
+  let sleepType = 'aansluiting';
   let sleepTijd = 0;
+  let pulsTimer    = null;
+  let pulsAlpha    = 1;
+  let pulsRichting = -1;
 
   function lijnDikte(diam) {
     const d = parseInt(diam) || 0;
+	if (d >= 2000) return 15;
     if (d >= 1500) return 12;
     if (d >= 1000) return 9;
     if (d >=  500) return 6;
@@ -1316,8 +1377,14 @@ function typeAansluitingenOpslaan() {
     document.getElementById('noord-label').style.display = 'block';
     document.getElementById('tekening-uitleg').style.display = 'block';
     document.getElementById('card-aansluiting').style.display = 'none';
+	document.getElementById('card-overstort').style.display   = 'none';
+    document.getElementById('btn-overstort').style.display    = 'block';
+    overstortKnopBijwerken();
 
-    setTimeout(() => { initCanvas(); putCanvasTekenen(); kompasStarten(); }, 50);
+    setTimeout(() => {
+      initCanvas(); putCanvasTekenen(); kompasStarten();
+      document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
     toonMelding('Tekening opgeslagen ✓');
   }
 
@@ -1364,21 +1431,30 @@ function typeAansluitingenOpslaan() {
     ctx.lineWidth = 5;
     ctx.stroke();
 
-    // Type in midden — lees uit put.type, niet uit het select-element
+    // Type in midden — verschuif omhoog als er een midden-overstort is
     if (put.type) {
       ctx.fillStyle = tekstKleur;
       ctx.font = `bold ${Math.round(putStraal * 0.45)}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(put.type, midden.x, midden.y);
+      if (put.overstort?.aanwezig && put.overstort?.type === 'midden') {
+        // Uiteinden van de overstortlijn liggen op loodRad en loodRad+PI
+        const ovRad   = (put.overstort.hoek - 90) * Math.PI / 180;
+        const loodRad = ovRad + Math.PI / 2;
+        const afst    = putStraal * 1.75;
+        // Bereken y-positie van beide uiteinden — kies het hoogste (kleinste y)
+        const y1 = midden.y + Math.sin(loodRad) * afst;
+        const y2 = midden.y + Math.sin(loodRad + Math.PI) * afst;
+        const gekozenRad = y1 <= y2 ? loodRad : loodRad + Math.PI;
+        ctx.fillText(put.type,
+          midden.x + Math.cos(gekozenRad) * afst,
+          midden.y + Math.sin(gekozenRad) * afst
+        );
+      } else {
+        ctx.fillText(put.type, midden.x, midden.y);
+      }
     }
 
-    // Noord indicator
-    ctx.fillStyle = '#ed6f26';
-    ctx.font = `bold ${Math.round(putStraal * 0.35)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('N', midden.x, midden.y - putStraal - 16);
 
     // Aansluitingen
     (put.aansluitingen || []).forEach((a, i) => {
@@ -1406,11 +1482,13 @@ function typeAansluitingenOpslaan() {
       ctx.textBaseline = 'middle';
       ctx.fillText(i + 1, lx, ly);
 
-// Diam label naast lijn
+      // Diam label naast lijn
       if (a.diam) {
-        const infoAfstand = putStraal + lijnLengte * 0.5;
-        const ix = midden.x + Math.cos(rad) * infoAfstand + Math.cos(rad + Math.PI/2) * 14;
-        const iy = midden.y + Math.sin(rad) * infoAfstand + Math.sin(rad + Math.PI/2) * 14;
+        const infoAfstand = putStraal + lijnLengte * 0.75;
+        const loodRad     = rad + Math.PI / 2;
+        const offset      = putStraal * 0.45;
+        const ix = midden.x + Math.cos(rad) * infoAfstand + Math.cos(loodRad) * offset;
+        const iy = midden.y + Math.sin(rad) * infoAfstand + Math.sin(loodRad) * offset;
         ctx.fillStyle = donker ? '#aaaaaa' : '#555555';
         ctx.font = `${Math.round(putStraal * 0.28)}px Arial`;
         ctx.textAlign = 'center';
@@ -1420,7 +1498,7 @@ function typeAansluitingenOpslaan() {
 
       // Stromingsrichting pijl
       if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
-        const pijlAfstand = putStraal + lijnLengte * 0.3;
+        const pijlAfstand = putStraal + lijnLengte * 0.5;
         const px = midden.x + Math.cos(rad) * pijlAfstand + Math.cos(rad - Math.PI/2) * 14;
         const py = midden.y + Math.sin(rad) * pijlAfstand + Math.sin(rad - Math.PI/2) * 14;
         const pijlRad  = a.stroom === 'naar-deze' ? rad + Math.PI : rad;
@@ -1439,7 +1517,41 @@ function typeAansluitingenOpslaan() {
         ctx.restore();
       }
     });
+	// Overstort tekenen op canvas
+    if (put.overstort?.aanwezig) {
+      tekenOverstortOpCanvas(ctx, put, midden, putStraal, putStraal * 1.7, donker, false);
+    }
+
+    if (overstortPlaatsModus) {
+      tekenPlaatsModusStippen(put);
+    }
   }
+
+function tekenPlaatsModusStippen(put) {
+  const lijnLengte = putStraal * 1.7;
+  ctx.beginPath();
+  ctx.arc(midden.x, midden.y, 16, 0, 2 * Math.PI);
+  ctx.fillStyle = `rgba(237,111,38,${pulsAlpha})`;
+  ctx.fill();
+  (put.aansluitingen || []).forEach(a => {
+    const rad = (a.hoek - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.arc(
+      midden.x + Math.cos(rad) * (putStraal + lijnLengte * 0.5),
+      midden.y + Math.sin(rad) * (putStraal + lijnLengte * 0.5),
+      16, 0, 2 * Math.PI
+    );
+    ctx.fillStyle = `rgba(237,111,38,${pulsAlpha})`;
+    ctx.fill();
+  });
+  pulsAlpha += pulsRichting * 0.04;
+  if (pulsAlpha <= 0.2) pulsRichting = 1;
+  if (pulsAlpha >= 1.0) pulsRichting = -1;
+  if (overstortPlaatsModus) {
+    if (pulsTimer) cancelAnimationFrame(pulsTimer);
+    pulsTimer = requestAnimationFrame(() => putCanvasTekenen());
+  }
+}
 
 function putCanvasBijwerken() {
   if (!canvas || !ctx) return;  // canvas nog niet geïnitialiseerd, stil negeren
@@ -1467,10 +1579,13 @@ function kompasStarten() {
 
 function kompasListenerToevoegen() {
   const wrap = document.getElementById('kompas-wrap');
-  if (wrap) wrap.style.display = 'block';
+  if (wrap) wrap.style.display = 'flex';
   kompasActief = true;
-  window.addEventListener('deviceorientationabsolute', kompasUpdate, true);
-  window.addEventListener('deviceorientation', kompasUpdate, true);
+  if ('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', kompasUpdate, true);
+  } else {
+    window.addEventListener('deviceorientation', kompasUpdate, true);
+  }
 }
 
 function kompasStappen() {
@@ -1549,6 +1664,7 @@ function kompasTeekenen(hoek) {
   cx.fillText('N', midden + Math.sin(rad) * -13, midden - Math.cos(rad) * 13);
 }
 
+  // Tik op HELE lijn → voor data-invulscherm openen
   function lijnGeraakt(px, py) {
     const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
     let dichtstbij = -1, minAfstand = 30;
@@ -1560,6 +1676,24 @@ function kompasTeekenen(hoek) {
       const x2 = midden.x + Math.cos(rad) * (putStraal + lijnLengte);
       const y2 = midden.y + Math.sin(rad) * (putStraal + lijnLengte);
       const d = puntNaarLijnAfstand(px, py, x1, y1, x2, y2);
+      if (d < minAfstand) { minAfstand = d; dichtstbij = i; }
+    });
+    return dichtstbij;
+  }
+
+  // Tik op BUITENSTE HELFT van lijn → voor longpress/slepen
+  function lijnGeraaktBuiten(px, py) {
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    let dichtstbij = -1, minAfstand = 30;
+    (put.aansluitingen || []).forEach((a, i) => {
+      const rad = (a.hoek - 90) * Math.PI / 180;
+      const lijnLengte = putStraal * 1.7;
+      // Alleen het buitenste 50% segment
+      const xMid = midden.x + Math.cos(rad) * (putStraal + lijnLengte * 0.5);
+      const yMid = midden.y + Math.sin(rad) * (putStraal + lijnLengte * 0.5);
+      const x2   = midden.x + Math.cos(rad) * (putStraal + lijnLengte);
+      const y2   = midden.y + Math.sin(rad) * (putStraal + lijnLengte);
+      const d = puntNaarLijnAfstand(px, py, xMid, yMid, x2, y2);
       if (d < minAfstand) { minAfstand = d; dichtstbij = i; }
     });
     return dichtstbij;
@@ -1595,76 +1729,139 @@ let vorigeHoek       = null;
 let undoTimer        = null;
 
 function onTouchStart(e) {
-  const c       = canvasCoords(e, true);
-  const geraakt = lijnGeraakt(c.x, c.y);
-  sleepTijd      = Date.now();
-  touchStartPos  = c;
+  const c = canvasCoords(e, true);
+  sleepTijd     = Date.now();
+  touchStartPos = c;
   sleepBevestigd = false;
-  sleepIdx       = geraakt;
+  sleepIdx  = -1;
+  sleepType = 'aansluiting';
 
-  if (longPressTimer) clearTimeout(longPressTimer);
+  if (overstortPlaatsModus) return;
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
 
-  if (sleepIdx >= 0) {
-    // Bewaar huidige hoek voor undo
-    vorigeHoek = app.projecten[app.actiefIdx].putten[actiefPutIdx].aansluitingen[sleepIdx].hoek;
+  const put      = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const inCirkel = Math.hypot(c.x - midden.x, c.y - midden.y) <= putStraal;
 
+  if (inCirkel) {
+    // Binnen de cirkel: alleen midden-overstort kan via longpress worden verplaatst
+    if (put.overstort?.aanwezig && put.overstort.type === 'midden') {
+      sleepType  = 'overstort';
+      sleepIdx   = 0;
+      vorigeHoek = put.overstort.hoek ?? 0;
+      longPressTimer = setTimeout(() => {
+        sleepBevestigd = true;
+        canvas.classList.add('sleep-actief');
+        if (navigator.vibrate) navigator.vibrate(30);
+        putCanvasTekenen();
+      }, 450);
+    }
+    // Geen midden-overstort → niets doen (sleepIdx blijft -1)
+    return;
+  }
+
+  // Buiten de cirkel: longpress op buitenste helft van aansluiting
+  const geraaktBuiten = lijnGeraaktBuiten(c.x, c.y);
+  if (geraaktBuiten >= 0) {
+    sleepType  = 'aansluiting';
+    sleepIdx   = geraaktBuiten;
+    vorigeHoek = put.aansluitingen[sleepIdx].hoek;
     longPressTimer = setTimeout(() => {
-      // Long press geactiveerd: start sleep-modus
       sleepBevestigd = true;
       canvas.classList.add('sleep-actief');
       if (navigator.vibrate) navigator.vibrate(30);
-      // Visuele feedback: herteken met dikke markering
       putCanvasTekenenMetMarkering(sleepIdx);
     }, 450);
-  } else {
-    sleepIdx = -1;
   }
 }
 
 function onTouchMove(e) {
+  if (overstortPlaatsModus) return;
   if (sleepIdx < 0) return;
 
-  const c  = canvasCoords(e, true);
-  const dx = c.x - touchStartPos.x;
-  const dy = c.y - touchStartPos.y;
-  const bewogen = Math.hypot(dx, dy);
+  const c      = canvasCoords(e, true);
+  const bewogen = Math.hypot(c.x - touchStartPos.x, c.y - touchStartPos.y);
 
   if (!sleepBevestigd) {
+    // Longpress nog niet bevestigd: annuleer als vinger te vroeg beweegt
     if (bewogen > 10) {
-      // Vinger bewoog te snel → annuleer long press, behandel als scroll
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       sleepIdx = -1;
     }
     return;
   }
 
-  // Sleep-modus actief
+  // Sleep bevestigd via longpress: verplaats het juiste element
   e.preventDefault();
-  app.projecten[app.actiefIdx].putten[actiefPutIdx].aansluitingen[sleepIdx].hoek = hoekVanMidden(c.x, c.y);
-  putCanvasTekenenMetMarkering(sleepIdx);
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+
+  if (sleepType === 'overstort') {
+    if (put.overstort) {
+      put.overstort.hoek = hoekVanMidden(c.x, c.y);
+      putCanvasTekenen();
+    }
+  } else {
+    put.aansluitingen[sleepIdx].hoek = hoekVanMidden(c.x, c.y);
+    putCanvasTekenenMetMarkering(sleepIdx);
+  }
 }
 
 function onTouchEnd(e) {
   if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
 
-  const duur    = Date.now() - sleepTijd;
-  const c       = e.changedTouches[0];
+  const tc      = e.changedTouches[0];
   const rect    = canvas.getBoundingClientRect();
-  const cx      = (c.clientX - rect.left) * (canvas.width / rect.width);
-  const cy      = (c.clientY - rect.top)  * (canvas.height / rect.height);
+  const cx      = (tc.clientX - rect.left) * (canvas.width  / rect.width);
+  const cy      = (tc.clientY - rect.top)  * (canvas.height / rect.height);
+  const duur    = Date.now() - sleepTijd;
   const bewogen = touchStartPos ? Math.hypot(cx - touchStartPos.x, cy - touchStartPos.y) : 999;
 
-  if (sleepIdx >= 0 && !sleepBevestigd && duur < 200 && bewogen < 10) {
-    // Korte tik → open aansluiting
-    aansluitingBewerken(sleepIdx);
-  } else if (sleepIdx >= 0 && sleepBevestigd) {
-    // Einde sleep → opslaan + undo-knop
-    opslaan();
-    toonUndoKnop(sleepIdx, vorigeHoek);
+  canvas.classList.remove('sleep-actief');
+  const put = app.projecten[app.actiefIdx]?.putten[actiefPutIdx];
+  if (!put) { touchStartPos = null; return; }
+
+  // Overstort plaatsmodus
+  if (overstortPlaatsModus) {
+    if (pulsTimer) cancelAnimationFrame(pulsTimer);
+    overstortPlaatsen(cx, cy);
+    sleepIdx       = -1;
+    sleepBevestigd = false;
+    touchStartPos  = null;
+    return;
   }
 
-  canvas.classList.remove('sleep-actief');
-  putCanvasTekenen(); // herteken zonder markering
+  // Sleep was bevestigd via longpress → opslaan
+  if (sleepBevestigd) {
+    opslaan();
+    if (sleepType === 'aansluiting' && sleepIdx >= 0) toonUndoKnop(sleepIdx, vorigeHoek);
+    putCanvasTekenen();
+    sleepIdx       = -1;
+    sleepBevestigd = false;
+    touchStartPos  = null;
+    return;
+  }
+
+  // Korte tik: editor openen (zone-gebaseerd)
+  if (duur < 300 && bewogen < 15 && !overstortJuistGeplaatst) {
+    const inCirkel = Math.hypot(cx - midden.x, cy - midden.y) <= putStraal;
+
+    if (inCirkel) {
+      // Binnen de cirkel: alleen midden-overstort openen
+      if (put.overstort?.aanwezig && put.overstort.type === 'midden') {
+        overstortBewerken();
+      }
+      // Geen midden-overstort → niets doen
+    } else {
+      // Buiten de cirkel: aansluiting-overstort of aansluiting
+      if (overstortGeraakt(cx, cy)) {
+        overstortBewerken();
+      } else {
+        const tikIdx = lijnGeraakt(cx, cy);
+        if (tikIdx >= 0) aansluitingBewerken(tikIdx);
+      }
+    }
+  }
+
+  putCanvasTekenen();
   sleepIdx       = -1;
   sleepBevestigd = false;
   touchStartPos  = null;
@@ -1727,29 +1924,70 @@ function toonUndoKnop(idx, oudeHoek) {
   undoTimer = setTimeout(() => { knop.remove(); }, 4000);
 }
 
-  function onMouseDown(e) {
-    const c = canvasCoords(e, false);
-    sleepIdx = lijnGeraakt(c.x, c.y);
-    sleepTijd = Date.now();
-  }
+function onMouseDown(e) {
+  if (overstortPlaatsModus) return;
+  const c    = canvasCoords(e, false);
+  sleepTijd  = Date.now();
+  const put  = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const inCirkel = Math.hypot(c.x - midden.x, c.y - midden.y) <= putStraal;
 
-  function onMouseMove(e) {
-    if (sleepIdx < 0 || sleepIdx === null) return;
-    const c = canvasCoords(e, false);
-    app.projecten[app.actiefIdx].putten[actiefPutIdx].aansluitingen[sleepIdx].hoek = hoekVanMidden(c.x, c.y);
+  if (inCirkel) {
+    if (put.overstort?.aanwezig && put.overstort.type === 'midden') {
+      sleepType = 'overstort';
+      sleepIdx  = 0;
+    } else {
+      sleepIdx = -1;
+    }
+    return;
+  }
+  sleepType = 'aansluiting';
+  sleepIdx  = lijnGeraakt(c.x, c.y);
+}
+
+function onMouseMove(e) {
+  if (sleepIdx < 0 || sleepIdx === null) return;
+  const c   = canvasCoords(e, false);
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  if (sleepType === 'overstort') {
+    if (put.overstort) {
+      put.overstort.hoek = hoekVanMidden(c.x, c.y);
+      putCanvasTekenen();
+    }
+  } else {
+    put.aansluitingen[sleepIdx].hoek = hoekVanMidden(c.x, c.y);
     putCanvasTekenen();
   }
-
-function onMouseUp() {
-  const duur = Date.now() - sleepTijd;
-  if (sleepIdx >= 0 && duur < 200) {
-    aansluitingBewerken(sleepIdx);
-  } else if (sleepIdx >= 0) {
-    opslaan();
-    putCanvasTekenen(); // ← was vergeten
-  }
-  sleepIdx = -1;
 }
+
+function onMouseUp(e) {
+  if (overstortPlaatsModus) {
+    const c = canvasCoords(e, false);
+    if (pulsTimer) cancelAnimationFrame(pulsTimer);
+    overstortPlaatsen(c.x, c.y);
+    sleepIdx = -1;
+    return;
+  }
+  const duur = Date.now() - sleepTijd;
+  const c    = canvasCoords(e, false);
+  const put  = app.projecten[app.actiefIdx]?.putten[actiefPutIdx];
+
+  if (duur < 200 && !overstortJuistGeplaatst) {
+    const inCirkel = Math.hypot(c.x - midden.x, c.y - midden.y) <= putStraal;
+    if (inCirkel) {
+      if (put?.overstort?.aanwezig && put.overstort.type === 'midden') overstortBewerken();
+    } else if (overstortGeraakt(c.x, c.y)) {
+      overstortBewerken();
+    } else if (sleepIdx >= 0) {
+      aansluitingBewerken(sleepIdx);
+    }
+  } else if (sleepIdx >= 0 && duur >= 200) {
+    opslaan();
+    putCanvasTekenen();
+  }
+  sleepIdx  = -1;
+  sleepType = 'aansluiting';
+}
+
 
   // =====================
   // AANSLUITING
@@ -1824,6 +2062,273 @@ function aansluitingOpslaan() {
     document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+
+// =====================
+// OVERSTORT
+// =====================
+function overstortKnopBijwerken() {
+  const knop = document.getElementById('btn-overstort');
+  const put  = app.projecten[app.actiefIdx]?.putten[actiefPutIdx];
+  if (!put || !put.aansluitingen?.length) { knop.style.display = 'none'; return; }
+  knop.style.display = 'block';
+  if (put.overstort?.aanwezig) {
+    knop.textContent = '🗑 Overstort verwijderen';
+    knop.className   = 'btn btn-gevaar';
+  } else {
+    knop.textContent = '💧 Overstort toevoegen';
+    knop.className   = 'btn btn-primair';
+  }
+}
+
+function overstortActie() {
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  if (put.overstort?.aanwezig) {
+    if (!confirm('Overstort verwijderen?')) return;
+    put.overstort = null;
+    opslaan();
+    overstortKnopBijwerken();
+    putCanvasTekenen();
+    document.getElementById('card-overstort').style.display = 'none';
+    document.getElementById('overstort-instructie').style.display = 'none';
+    toonMelding('Overstort verwijderd ✓');
+    return;
+  }
+  overstortPlaatsModus = true;
+  document.getElementById('overstort-instructie').style.display = 'block';
+  putCanvasTekenen();
+  toonMelding('Tik op canvas om overstort te plaatsen', 5000);
+}
+
+function overstortPlaatsen(px, py) {
+  overstortPlaatsModus = false;
+  document.getElementById('overstort-instructie').style.display = 'none';
+  const put        = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const lijnLengte = putStraal * 1.7;
+
+  // Controleer eerst de middenpunt-dot (heeft voorrang)
+  const distCenter = Math.hypot(px - midden.x, py - midden.y);
+  if (distCenter < 40) {
+    put.overstort = {
+      aanwezig: true, type: 'midden', aansluitingIdx: null,
+      hoek: 0,
+      koppelput: '', drempelhoogte: '', drempelbreedte: '', materiaal: '', opmerking: ''
+    };
+  } else {
+    // Zoek dichtstbijzijnde aansluiting-dot (op basis van dot-positie, niet lijn)
+    let dichtstbij = -1, minDist = 55;
+    (put.aansluitingen || []).forEach((a, i) => {
+      const rad  = (a.hoek - 90) * Math.PI / 180;
+      const dotX = midden.x + Math.cos(rad) * (putStraal + lijnLengte * 0.5);
+      const dotY = midden.y + Math.sin(rad) * (putStraal + lijnLengte * 0.5);
+      const d    = Math.hypot(px - dotX, py - dotY);
+      if (d < minDist) { minDist = d; dichtstbij = i; }
+    });
+
+    if (dichtstbij >= 0) {
+      put.overstort = {
+        aanwezig: true, type: 'aansluiting', aansluitingIdx: dichtstbij,
+        hoek: put.aansluitingen[dichtstbij].hoek,
+        koppelput: '', drempelhoogte: '', drempelbreedte: '', materiaal: '', opmerking: ''
+      };
+    } else {
+      put.overstort = {
+        aanwezig: true, type: 'midden', aansluitingIdx: null,
+        hoek: hoekVanMidden(px, py),
+        koppelput: '', drempelhoogte: '', drempelbreedte: '', materiaal: '', opmerking: ''
+      };
+    }
+  }
+  opslaan();
+  putCanvasTekenen();
+  overstortKnopBijwerken();
+  overstortKoppelputSelectLaden();
+  overstortJuistGeplaatst = true;
+  setTimeout(() => { overstortJuistGeplaatst = false; }, 500);
+  overstortBewerken();
+}
+
+function tekenOverstortOpCanvas(ctx2, put, mid, straal, ll, donker, isExport) {
+  const ov    = put.overstort;
+  const kleur = '#185FA5';
+
+  if (ov.type === 'aansluiting' && ov.aansluitingIdx !== null) {
+    const a = put.aansluitingen[ov.aansluitingIdx];
+    const rad = (a.hoek - 90) * Math.PI / 180;
+    const afstand = straal + (isExport ? 22 : 14);
+    const loodRad = rad + Math.PI / 2;
+    const aansluitingOvs = isExport ? Math.round(straal * 0.7) : Math.round(straal * 0.88);
+    const dikte = isExport ? 8 : 5;
+    const cx = mid.x + Math.cos(rad) * afstand;
+    const cy = mid.y + Math.sin(rad) * afstand;
+    const cx2 = mid.x + Math.cos(rad) * (afstand + dikte);
+    const cy2 = mid.y + Math.sin(rad) * (afstand + dikte);
+
+    ctx2.beginPath();
+    ctx2.moveTo(cx  + Math.cos(loodRad) * -aansluitingOvs, cy  + Math.sin(loodRad) * -aansluitingOvs);
+    ctx2.lineTo(cx  + Math.cos(loodRad) *  aansluitingOvs, cy  + Math.sin(loodRad) *  aansluitingOvs);
+    ctx2.strokeStyle = kleur; ctx2.lineWidth = isExport ? 3.5 : 2.5; ctx2.stroke();
+
+    ctx2.beginPath();
+    ctx2.moveTo(cx2 + Math.cos(loodRad) * -aansluitingOvs, cy2 + Math.sin(loodRad) * -aansluitingOvs);
+    ctx2.lineTo(cx2 + Math.cos(loodRad) *  aansluitingOvs, cy2 + Math.sin(loodRad) *  aansluitingOvs);
+    ctx2.strokeStyle = kleur; ctx2.lineWidth = isExport ? 3.5 : 2.5; ctx2.stroke();
+
+    if (ov.koppelput) {
+      // Links naast het lijn-nummer (90° links van de lijnrichting)
+      const numAfstand = straal + ll + (isExport ? 18 : 10);
+      const zijRad     = rad - Math.PI / 2;
+      const zijOffset  = isExport ? 90 : 38;
+      const lx = mid.x + Math.cos(rad) * numAfstand + Math.cos(zijRad) * zijOffset;
+      const ly = mid.y + Math.sin(rad) * numAfstand + Math.sin(zijRad) * zijOffset;
+      const fontSize = isExport ? 32 : Math.round(straal * 0.28);
+      ctx2.font = `bold ${fontSize}px Arial`;
+      const tekst = `→ ${ov.koppelput}`;
+      const tw    = ctx2.measureText(tekst).width;
+      const pad   = isExport ? 14 : 5;
+      ctx2.fillStyle = '#dce9f5';
+      ctx2.fillRect(lx - tw/2 - pad, ly - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+      ctx2.strokeStyle = kleur;
+      ctx2.lineWidth   = isExport ? 1.5 : 1;
+      ctx2.strokeRect(lx - tw/2 - pad, ly - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+      ctx2.fillStyle    = kleur;
+      ctx2.textAlign    = 'center';
+      ctx2.textBaseline = 'middle';
+      ctx2.fillText(tekst, lx, ly);
+    }
+
+  } else {
+    const rad     = (ov.hoek - 90) * Math.PI / 180;
+    const loodRad = rad + Math.PI / 2;
+    const putOvs    = straal * 0.88;
+    const dikte   = isExport ? 8 : 5;
+    for (const offset of [-dikte / 2, dikte / 2]) {
+      const ox = Math.cos(rad) * offset;
+      const oy = Math.sin(rad) * offset;
+      ctx2.beginPath();
+      ctx2.moveTo(mid.x + Math.cos(loodRad) * -putOvs + ox, mid.y + Math.sin(loodRad) * -putOvs + oy);
+      ctx2.lineTo(mid.x + Math.cos(loodRad) *  putOvs + ox, mid.y + Math.sin(loodRad) *  putOvs + oy);
+      ctx2.strokeStyle = kleur; ctx2.lineWidth = isExport ? 3.5 : 2.5; ctx2.stroke();
+    }
+  }
+}
+
+function overstortGeraakt(px, py) {
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  if (!put.overstort?.aanwezig) return false;
+  const ov = put.overstort;
+
+  // Midden-overstort: de dubbele lijn valt altijd binnen de put-cirkel
+  if (ov.type === 'midden') {
+    return Math.hypot(px - midden.x, py - midden.y) <= putStraal;
+  }
+
+  // Aansluiting-overstort: dubbele streep net buiten de put-cirkel
+  if (ov.aansluitingIdx !== null) {
+    const a       = put.aansluitingen[ov.aansluitingIdx];
+    const rad     = (a.hoek - 90) * Math.PI / 180;
+    const afstand = putStraal + 14;
+    const ocx     = midden.x + Math.cos(rad) * afstand;
+    const ocy     = midden.y + Math.sin(rad) * afstand;
+    const loodRad = rad + Math.PI / 2;
+    const hb      = 32;
+    const d = puntNaarLijnAfstand(px, py,
+      ocx + Math.cos(loodRad) * -hb, ocy + Math.sin(loodRad) * -hb,
+      ocx + Math.cos(loodRad) *  hb, ocy + Math.sin(loodRad) *  hb);
+    return d < 28;
+  }
+  return false;
+}
+
+
+function overstortKoppelputSelectLaden() {
+  const project = app.projecten[app.actiefIdx];
+  const put     = project.putten[actiefPutIdx];
+  const sel     = document.getElementById('ov-koppelput');
+  const huidig  = put.overstort?.koppelput || '';
+  sel.innerHTML = '<option value="">— geen / in deze put —</option>' +
+    project.putten.filter((_, i) => i !== actiefPutIdx).map(p =>
+      `<option value="${p.id}" ${p.id === huidig ? 'selected' : ''}>${p.id}</option>`
+    ).join('') +
+    '<option value="__nieuw">＋ Nieuwe put</option>';
+  document.getElementById('ov-nieuwe-put-wrap').style.display = 'none';
+  // Altijd velden herstellen bij (her)openen, ook als __nieuw eerder geselecteerd was
+  ['ov-hoogte', 'ov-breedte', 'ov-materiaal', 'ov-opmerking'].forEach(id => {
+    const el = document.getElementById(id);
+    el.disabled      = false;
+    el.style.opacity = '1';
+  });
+}
+
+function overstortKoppelputGewijzigd() {
+  const val     = document.getElementById('ov-koppelput').value;
+  const isNieuw = val === '__nieuw';
+  document.getElementById('ov-nieuwe-put-wrap').style.display = isNieuw ? 'block' : 'none';
+  ['ov-hoogte', 'ov-breedte', 'ov-materiaal', 'ov-opmerking'].forEach(veldId => {
+    const el = document.getElementById(veldId);
+    el.disabled    = isNieuw;
+    el.style.opacity = isNieuw ? '0.35' : '1';
+  });
+}
+
+function overstortNieuwePutAanmaken() {
+  const id      = document.getElementById('ov-nieuwe-put-id').value.trim();
+  const project = app.projecten[app.actiefIdx];
+  if (!id) { alert('Vul een put ID in.'); return; }
+  if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
+  project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '', overstort: null });
+  opslaan();
+  overstortKoppelputSelectLaden();
+  document.getElementById('ov-koppelput').value = id;
+  document.getElementById('ov-nieuwe-put-wrap').style.display = 'none';
+  document.getElementById('ov-nieuwe-put-id').value = '';
+  ['ov-hoogte', 'ov-breedte', 'ov-materiaal', 'ov-opmerking'].forEach(veldId => {
+    const el = document.getElementById(veldId);
+    el.disabled      = false;
+    el.style.opacity = '1';
+  });
+  toonMelding(`Put ${id} aangemaakt ✓`);
+}
+
+function overstortBewerken() {
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const ov  = put.overstort || {};
+  overstortKoppelputSelectLaden();
+  document.getElementById('ov-hoogte').value    = ov.drempelhoogte  || '';
+  document.getElementById('ov-breedte').value   = ov.drempelbreedte || '';
+  document.getElementById('ov-materiaal').value = ov.materiaal      || '';
+  document.getElementById('ov-opmerking').value = ov.opmerking      || '';
+  document.getElementById('card-overstort').style.display = 'block';
+  setTimeout(() => {
+    document.getElementById('card-overstort').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+function overstortOpslaan() {
+  const put       = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const koppelput = document.getElementById('ov-koppelput').value;
+  put.overstort = {
+    ...put.overstort,
+    drempelhoogte:  document.getElementById('ov-hoogte').value,
+    drempelbreedte: document.getElementById('ov-breedte').value,
+    materiaal:      document.getElementById('ov-materiaal').value,
+    opmerking:      document.getElementById('ov-opmerking').value,
+    koppelput:      koppelput === '__nieuw' ? '' : koppelput
+  };
+  opslaan();
+  putCanvasTekenen();
+  document.getElementById('card-overstort').style.display = 'none';
+  setTimeout(() => {
+    document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+  toonMelding('Overstort opgeslagen ✓');
+}
+
+function overstortAnnuleren() {
+  document.getElementById('card-overstort').style.display = 'none';
+  document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+
   // =====================
   // FOTO'S
   // =====================
@@ -1852,6 +2357,27 @@ async function fotoMaken() {
   setTimeout(() => inp.click(), 50);
 }
 
+function gpsNaarExif(base64jpeg, gps) {
+  if (!gps || !window.piexif) return base64jpeg;
+  try {
+    function toDms(decimaal) {
+      const graden   = Math.floor(Math.abs(decimaal));
+      const minuten  = Math.floor((Math.abs(decimaal) - graden) * 60);
+      const seconden = ((Math.abs(decimaal) - graden) * 60 - minuten) * 60;
+      return [[graden,1],[minuten,1],[Math.round(seconden*100),100]];
+    }
+    const exifObj = { "GPS": {
+      [piexif.GPSIFD.GPSLatitudeRef]:  parseFloat(gps.lat) >= 0 ? 'N' : 'S',
+      [piexif.GPSIFD.GPSLatitude]:     toDms(gps.lat),
+      [piexif.GPSIFD.GPSLongitudeRef]: parseFloat(gps.lon) >= 0 ? 'E' : 'W',
+      [piexif.GPSIFD.GPSLongitude]:    toDms(gps.lon),
+    }};
+    const exifStr = piexif.dump(exifObj);
+    return piexif.insert(exifStr, base64jpeg);
+  } catch(e) { return base64jpeg; }
+}
+
+
 document.getElementById('camera-input').addEventListener('change', async function() {
   const file = this.files[0];
   if (!file) return;
@@ -1860,25 +2386,24 @@ document.getElementById('camera-input').addEventListener('change', async functio
   const nr      = (put.fotos ? put.fotos.length : 0) + 1;
   const naam    = fotoNaam(put.id, project.init, nr);  // ← initialen toegevoegd (zie punt 5)
 
-  try {
-    const data = await comprimeerFoto(file);
+try {
+    let data = await comprimeerFoto(file);
+    if (_gps) data = gpsNaarExif(data, _gps);
 
     if (FSA_ONDERSTEUND && !fotoMapHandle) {
-      // Eerste gebruik: vraag map te kiezen
       toonMelding('Kies éénmalig een map voor foto-opslag…', 4000);
       await fotoMapKiezen();
     }
 
     if (FSA_ONDERSTEUND && fotoMapHandle) {
       await fotoSchrijvenNaarMap(naam, data);
-      if (!put.fotos) put.fotos = [];
-      put.fotos.push({ naam, gps: _gps, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
     } else {
       if (!db) { alert('Database niet beschikbaar.'); return; }
       await fotoOpslaanDB(naam, data);
-      if (!put.fotos) put.fotos = [];
-      put.fotos.push({ naam, data, gps: _gps, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
     }
+
+    if (!put.fotos) put.fotos = [];
+    put.fotos.push({ naam, data, gps: _gps, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
 
     _gps = null;
     opslaan();
@@ -1887,16 +2412,14 @@ document.getElementById('camera-input').addEventListener('change', async functio
   } catch(e) {
     alert('Foto fout: ' + (e && e.message ? e.message : JSON.stringify(e)));
   }
+  
   this.value = '';
 });
 
 function fotoGridTekenen() {
   if (actiefPutIdx === null || app.actiefIdx === null) return;
-  const el = document.getElementById('d-foto-teller');
-  if (!el) return;
   const put   = app.projecten[app.actiefIdx].putten[actiefPutIdx];
   const fotos = put.fotos || [];
-  el.textContent = `${fotos.length} foto${fotos.length !== 1 ? "'s" : ''}`;
   const knop = document.getElementById('btn-foto');
   knop.className = fotos.length === 0 ? 'btn btn-gevaar' : 'btn btn-oranje';
 
@@ -1967,23 +2490,30 @@ dbOpenen().then(async () => {
   document.getElementById('np-initialen').value = initOphalen();
   await fotoMapInitialiseren(); // haal opgeslagen map-handle op
   fotoMapPadTonen();
-  if (app.actiefIdx !== null && app.projecten[app.actiefIdx]) {
-    projectOpenen(app.actiefIdx);
-  } else {
+  
     app.actiefIdx = null;
     projectLijstTekenen();
     toonScherm('s-projecten');
-  }
+  
 }).catch(e => toonMelding('Database fout: ' + e));
   
   // =====================
   // HTML EXPORT
   // =====================
-  async function exporteerRapport() {
+async function exporteerRapport() {
     const project = app.projecten[app.actiefIdx];
     if (!project) return;
 
+    function htmlEsc(str) {
+      return String(str || '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+    }
+
     toonMelding('Rapport wordt opgebouwd…', 8000);
+	try {
 
 for (const put of project.putten) {
   for (const f of (put.fotos || [])) {
@@ -2003,6 +2533,7 @@ for (const put of project.putten) {
         oc.width = 800; oc.height = 800;
         const octx = oc.getContext('2d');
         const ocStr = 800 * 0.18;
+		const ocLL  = ocStr * 1.2;
         const ocMid = { x: 400, y: 400 };
         const lijnKleurOC = (a) => (a.bob || a.diam || a.vorm || a.mat) ? '#111111' : '#c0392b';
 
@@ -2017,14 +2548,44 @@ for (const put of project.putten) {
           octx.font = `bold ${Math.round(ocStr * 0.45)}px Arial`;
           octx.textAlign = 'center';
           octx.textBaseline = 'middle';
-          octx.fillText(put.type, ocMid.x, ocMid.y);
+          if (put.overstort?.aanwezig && put.overstort?.type === 'midden') {
+            const ovRadExp   = (put.overstort.hoek - 90) * Math.PI / 180;
+            const loodRadExp = ovRadExp + Math.PI / 2;
+            const afstExp    = ocStr * 1.75;
+            const y1exp = ocMid.y + Math.sin(loodRadExp) * afstExp;
+            const y2exp = ocMid.y + Math.sin(loodRadExp + Math.PI) * afstExp;
+            const gekozenRadExp = y1exp <= y2exp ? loodRadExp : loodRadExp + Math.PI;
+            octx.fillText(put.type,
+              ocMid.x + Math.cos(gekozenRadExp) * afstExp,
+              ocMid.y + Math.sin(gekozenRadExp) * afstExp
+            );
+          } else {
+            octx.fillText(put.type, ocMid.x, ocMid.y);
+          }
         }
 
-        octx.fillStyle = '#ed6f26';
-        octx.font = `bold ${Math.round(ocStr * 0.35)}px Arial`;
-        octx.textAlign = 'center';
-        octx.textBaseline = 'middle';
-        octx.fillText('N', ocMid.x, ocMid.y - ocStr - 18);
+// Noord-pijl linksboven
+(function() {
+  const ax = 48, ay = 90, len = 48;
+  octx.beginPath();
+  octx.moveTo(ax, ay + 10);
+  octx.lineTo(ax, ay - len);
+  octx.strokeStyle = '#ed6f26';
+  octx.lineWidth = 5;
+  octx.stroke();
+  octx.beginPath();
+  octx.moveTo(ax, ay - len);
+  octx.lineTo(ax - 16, ay - len + 26);
+  octx.lineTo(ax + 16, ay - len + 26);
+  octx.closePath();
+  octx.fillStyle = '#ed6f26';
+  octx.fill();
+  octx.fillStyle = '#ed6f26';
+  octx.font = 'bold 36px Arial';
+  octx.textAlign = 'center';
+  octx.textBaseline = 'middle';
+  octx.fillText('N', ax, ay - len - 20);
+})();
 
         put.aansluitingen.forEach((a, i) => {
           const rad = (a.hoek - 90) * Math.PI / 180;
@@ -2047,8 +2608,8 @@ for (const put of project.putten) {
           octx.textBaseline = 'middle';
           octx.fillText(i + 1, lx, ly);
           if (a.diam) {
-            const ix = ocMid.x + Math.cos(rad) * (ocStr + ll * 0.5) + Math.cos(rad + Math.PI/2) * 24;
-            const iy = ocMid.y + Math.sin(rad) * (ocStr + ll * 0.5) + Math.sin(rad + Math.PI/2) * 24;
+            const ix = ocMid.x + Math.cos(rad) * (ocStr + ll * 0.5) + Math.cos(rad + Math.PI/2) * 58;
+            const iy = ocMid.y + Math.sin(rad) * (ocStr + ll * 0.5) + Math.sin(rad + Math.PI/2) * 58;
             octx.fillStyle = '#555555';
             octx.font = `${Math.round(ocStr * 0.28)}px Arial`;
             octx.textAlign = 'center';
@@ -2057,7 +2618,7 @@ for (const put of project.putten) {
           }
 
           if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
-            const pijlAfstand = ocStr + ll * 0.3;
+            const pijlAfstand = ocStr + ll * 0.5;
             const px = ocMid.x + Math.cos(rad) * pijlAfstand + Math.cos(rad - Math.PI/2) * 24;
             const py = ocMid.y + Math.sin(rad) * pijlAfstand + Math.sin(rad - Math.PI/2) * 24;
             const pijlRad  = a.stroom === 'naar-deze' ? rad + Math.PI : rad;
@@ -2076,19 +2637,53 @@ for (const put of project.putten) {
             octx.restore();
           }
         });
-
+        if (put.overstort?.aanwezig) {
+          tekenOverstortOpCanvas(octx, put, ocMid, ocStr, ocLL, false, true);
+        }
         offscreenCanvasses[put.id] = oc.toDataURL('image/png');
       }
     }
 
-    const datum = new Date().toLocaleDateString('nl-NL');
-    const puttenPerRij = 2;
-    let putHTML = '';
+    const datum = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    // Samenvatting berekenen
+const totaal       = project.putten.length;
+const compleetLijst = project.putten.filter(p => putCompleet(p));
+const onvolledigLijst = project.putten.filter(p => !putCompleet(p));
+const metOverstortLijst = project.putten.filter(p => p.overstort?.aanwezig);
+const metOverstort = metOverstortLijst.length;
+const metOverstortNamen = metOverstortLijst.map(p => p.id).join(', ');
+const nietToegankelijkLijst = project.putten.filter(p =>
+  p.putAlgemeen === 'Niet te openen, zit vast' ||
+  p.putAlgemeen === 'Niet te vinden, onder maaiveld');
+const nietToegankelijk = nietToegankelijkLijst.length;
+const nietToegankelijkNamen = nietToegankelijkLijst.map(p => p.id).join(', ');
+const aantalFotos  = project.putten.reduce((s, p) => s + (p.fotos||[]).length, 0);
 
-    for (let r = 0; r < project.putten.length; r += puttenPerRij) {
-      const rij = project.putten.slice(r, r + puttenPerRij);
-      putHTML += `<div class="put-rij">`;
-      for (const put of rij) {
+const onvolledigNamen = onvolledigLijst
+  .filter(p => p.putAlgemeen !== 'Niet te openen, zit vast' && p.putAlgemeen !== 'Niet te vinden, onder maaiveld')
+  .map(p => p.id).join(', ');
+
+const samenvattingHTML = `
+<div class="samenvatting">
+  <div class="sam-meta">
+    <table class="sam-tabel">
+      <tr><td class="sam-label">Medewerker</td><td>${htmlEsc(project.init)}</td></tr>
+	  <tr><td class="sam-label">Aanmaak datum</td><td>${project.datum.split('-').reverse().join('-')}</td></tr>
+      <tr><td class="sam-label">Export datum</td><td>${datum}</td></tr>
+      <tr><td class="sam-label">Aantal putten</td><td>${totaal}</td></tr>
+    </table>
+<table class="sam-tabel">
+      <tr><td class="sam-icon sam-compleet">✓</td><td class="sam-compleet">Compleet</td><td class="sam-compleet">${compleetLijst.length} van ${totaal}</td></tr>
+      ${onvolledigNamen ? `<tr><td class="sam-icon sam-onvolledig">○</td><td class="sam-onvolledig">Onvolledig</td><td class="sam-onvolledig">${onvolledigLijst.length} — ${onvolledigNamen}</td></tr>` : ''}
+      ${metOverstort ? `<tr><td class="sam-icon">💧</td><td>Overstort</td><td>${metOverstort} — ${metOverstortNamen}</td></tr>` : ''}
+      ${nietToegankelijk ? `<tr><td class="sam-icon sam-waarschuwing">⚠</td><td class="sam-waarschuwing">Niet toegankelijk</td><td class="sam-waarschuwing">${nietToegankelijk} — ${nietToegankelijkNamen}</td></tr>` : ''}
+      <tr><td class="sam-icon">📷</td><td>Foto's</td><td>${aantalFotos}</td></tr>
+    </table>
+  </div>
+</div>`;
+
+let putHTML = '<div class="put-rij">';
+for (const put of project.putten) {
         const algTekst = put.putAlgemeen || '';
         let algHTML = '';
         if (algTekst === 'Niet te openen, zit vast') {
@@ -2096,7 +2691,7 @@ for (const put of project.putten) {
         } else if (algTekst === 'Niet te vinden, onder maaiveld') {
           algHTML = `<div class="alg rood">● Niet te vinden, onder maaiveld</div>`;
         } else if (algTekst) {
-          algHTML = `<div class="alg">● Opmerking: ${algTekst}</div>`;
+          algHTML = `<div class="alg">● Opmerking: ${htmlEsc(algTekst)}</div>`;
         } else {
           algHTML = `<div class="alg grijs">● —</div>`;
         }
@@ -2120,64 +2715,89 @@ for (const put of project.putten) {
           put.aansluitingen.forEach((a, i) => {
             aanslHTML += `<tr>
               <td>${i+1}</td>
-              <td>${a.bob || '—'}</td>
-              <td>${a.bbb || '—'}</td>
-              <td>${a.diam || '—'}</td>
+              <td>${a.bob ? a.bob + ' cm' : '—'}</td>
+              <td>${a.bbb ? a.bbb + ' cm' : '—'}</td>
+              <td>${a.diam ? a.diam + ' mm' : '—'}</td>
               <td>${a.vorm || '—'}</td>
               <td>${a.mat || '—'}</td>
             </tr>`;
             if (a.opmerking) {
-              aanslHTML += `<tr class="opm-rij"><td></td><td colspan="5">${a.opmerking}</td></tr>`;
+              aanslHTML += `<tr class="opm-rij"><td></td><td colspan="5">${htmlEsc(a.opmerking)}</td></tr>`;
             }
           });
-          aanslHTML += `</tbody></table></div></div>`;
+          aanslHTML += `</tbody></table>`;
+if (put.overstort?.aanwezig) {
+  const ov = put.overstort;
+  aanslHTML += `<table class="aansl-tabel ov-tabel" style="margin-top:6px;">
+    <colgroup><col style="width:130px"><col></colgroup>
+    <thead><tr><th colspan="2" style="background:#dce9f5;color:#185FA5;">Overstort</th></tr></thead>
+    <tbody>
+      <tr><td>Drempelhoogte</td><td>${ov.drempelhoogte ? ov.drempelhoogte + ' cm' : '—'}</td></tr>
+      <tr><td>Drempelbreedte</td><td>${ov.drempelbreedte ? ov.drempelbreedte + ' cm' : '—'}</td></tr>
+      <tr><td>Materiaal</td><td>${ov.materiaal || '—'}</td></tr>
+      ${ov.koppelput ? `<tr><td>Gekoppeld aan put</td><td>${htmlEsc(ov.koppelput)}</td></tr>` : ''}
+      ${ov.opmerking ? `<tr class="opm-rij"><td colspan="2">${htmlEsc(ov.opmerking)}</td></tr>` : ''}
+    </tbody>
+  </table>`;
+}
+aanslHTML += `</div></div>`;
         } else {
           aanslHTML = `<div class="grijs" style="font-size:12px;margin-top:4px;">Geen aansluitingen ingevuld</div>`;
         }
 
         putHTML += `<div class="put-blok">
-          <div class="put-kop">PUT ${put.id}${put.type ? ` <span class="type-tag">${put.type}</span>` : ''}</div>
+          <div class="put-kop">PUT ${htmlEsc(put.id)}${put.type ? ` <span class="type-tag">${put.type}</span>` : ''}</div>
           ${algHTML}
-          <div class="foto-regel ${heeftFotos ? '' : 'grijs'}">📷 ${heeftFotos ? fotoNamen : 'Geen foto\'s'}</div>
+		  <div class="foto-regel ${heeftFotos ? '' : 'grijs'}">Foto\'s: &nbsp; ${heeftFotos ? fotoNamen : 'Geen foto\'s'}</div>
           ${aanslHTML}
         </div>`;
       }
       putHTML += `</div>`;
-    }
+
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Rapport ${project.naam}</title>
+    <title>Rapport ${htmlEsc(project.naam)}</title>
     <style>
       @page { size: A4 portrait; margin: 8mm 6mm; }
       body { font-family: Arial, sans-serif; font-size: 14px; color: #111; }
       h1 { font-size: 18px; margin: 0 0 3px; color: #0f6434; }
       .meta { font-size: 13px; color: #555; margin-bottom: 12px; border-bottom: 2px solid #0f6434; padding-bottom: 6px; }
-      .put-rij { display: flex; gap: 10px; margin-bottom: 12px; page-break-inside: avoid; align-items: stretch; }
-      .put-blok { flex: 0 0 calc(50% - 5px); max-width: calc(50% - 5px); border: 1px solid #ccc; border-radius: 6px; padding: 10px; box-sizing: border-box; }
+	  .ov-tabel { width: 100%; }
+      .put-rij { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; align-items: flex-start; }
+      .put-blok { flex: 1 1 650px; min-width: 0; border: 1px solid #ccc; border-radius: 6px; padding: 10px; box-sizing: border-box; }
+      .cirkel-tabel-rij { display: flex; flex-wrap: wrap; flex-direction: row; gap: 8px; align-items: flex-start; margin-top: 6px; }
+      .cirkel-wrap { flex: 0 0 240px; width: 240px; }
+      .cirkel-img { width: 240px; height: 240px; display: block; }
+      .tabel-wrap { flex: 1 1 384px; min-width: 0; }
+      .samenvatting { border: 1px solid #ccc; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; background: #f9f9f9; }
+      .sam-meta { display: flex; flex-wrap: wrap; gap: 20px; }
+      .sam-tabel { font-size: 13px; border-collapse: collapse; }
+	  .sam-tabel td { padding: 2px 10px 2px 0; vertical-align: top; }
+      .sam-tabel td.sam-icon { width: 24px; text-align: center; padding-right: 6px; }
+      .sam-label { color: #555; white-space: nowrap; }
+      .sam-compleet { color: #0f6434; font-weight: 600; }
+      .sam-onvolledig { color: #ed6f26; font-weight: 600; }
+      .sam-waarschuwing { color: #c0392b; font-weight: 600; }
       .put-kop { font-size: 15px; font-weight: bold; color: #0f6434; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
       .type-tag { background: #e8f4ec; color: #0a4d27; border-radius: 4px; padding: 1px 6px; font-size: 12px; font-weight: 600; margin-left: 5px; }
       .alg { font-size: 13px; margin-bottom: 4px; }
       .alg.rood { color: #c0392b; font-weight: 600; }
       .alg.grijs, .grijs { color: #999; }
       .foto-regel { font-size: 12px; color: #555; word-break: break-all; margin-bottom: 6px; padding-top: 4px; border-top: 1px solid #eee; }
-      .cirkel-tabel-rij { display: flex; flex-direction: row; gap: 8px; align-items: flex-start; margin-top: 6px; }
-      .cirkel-wrap { flex: 0 0 240px; width: 240px; }
-      .cirkel-img { width: 240px; height: 240px; display: block; }
-      .tabel-wrap { flex: 1 1 0; min-width: 0; }
       .aansl-tabel { width: 100%; border-collapse: collapse; table-layout: fixed; }
       .aansl-tabel th { background: #e8f4ec; padding: 3px 4px; text-align: left; border: 1px solid #ccc; font-size: 13px; white-space: nowrap; color: #0a4d27; }
       .aansl-tabel td { padding: 3px 4px; border: 1px solid #eee; vertical-align: top; font-size: 13px; word-break: break-word; }
       .aansl-tabel tr:nth-child(even) td { background: #fafafa; }
-      .aansl-tabel col.nr   { width: 20px; }
-      .aansl-tabel col.bob  { width: 36px; }
-      .aansl-tabel col.bbb  { width: 36px; }
-      .aansl-tabel col.diam { width: 36px; }
-      .aansl-tabel col.vorm { width: 42px; }
-      .aansl-tabel col.mat  { width: 52px; }
+      .aansl-tabel col.nr   { width: 28px; }
+      .aansl-tabel col.bob  { width: 58px; }
+      .aansl-tabel col.bbb  { width: 58px; }
+      .aansl-tabel col.diam { width: 68px; }
+      .aansl-tabel col.vorm { width: 72px; }
+      .aansl-tabel col.mat  { width: 100px; }
 	  .opm-rij td { color: #444; font-style: italic; padding: 3px 5px 6px 14px; border-top: none; font-size: 13px; }
     </style></head><body>
-    <h1>${project.naam}</h1>
-    <div class="meta">Medewerker: ${project.init} &nbsp;|&nbsp; Datum: ${project.datum} &nbsp;|&nbsp; Export: ${datum} &nbsp;|&nbsp; Putten: ${project.putten.length}</div>
+    <h1>${htmlEsc(project.naam)}</h1>
+    ${samenvattingHTML}
     ${putHTML}
     </body></html>`;
 
@@ -2185,24 +2805,46 @@ for (const put of project.putten) {
 	const bestandsnaam = `Putten_${project.naam.replace(/\s+/g,'_').replace(/\//g,'-')}_${project.init}.html`;
     const file = new File([blob], bestandsnaam, { type: 'text/html' });
 
+const url = URL.createObjectURL(blob);
+
+    // Probeer eerst delen via share-sheet (Android/iOS)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: project.naam });
         toonMelding('Rapport gedeeld ✓');
-        project.verzonden = (project.verzonden || 0) + 1; opslaan();
+        project.verzonden = (project.verzonden || 0) + 1;
+        opslaan();
+        URL.revokeObjectURL(url);
+        return;
       } catch(e) {
-        if (e.name !== 'AbortError') {
-          const url = URL.createObjectURL(blob);
-          window.open(url, '_blank');
-          setTimeout(() => URL.revokeObjectURL(url), 30000);
+        if (e.name === 'AbortError') {
+          URL.revokeObjectURL(url);
+          toonMelding('Delen geannuleerd.');
+          return;
         }
+        // Share mislukt — val door naar download
       }
-    } else {
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-      toonMelding('Rapport geopend ✓');
-      project.verzonden = (project.verzonden || 0) + 1; opslaan();
+    }
+
+    // Fallback: directe download via link
+    try {
+      const a = document.createElement('a');
+      a.href     = url;
+      a.download = bestandsnaam;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toonMelding('Rapport wordt gedownload ✓');
+      project.verzonden = (project.verzonden || 0) + 1;
+      opslaan();
+    } catch(e) {
+      toonMelding('Download mislukt: ' + (e.message || e));
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+    } catch(err) {
+      toonMelding('Fout bij opbouwen rapport: ' + (err.message || err));
+      console.error('exporteerRapport fout:', err);
     }
   }
   
