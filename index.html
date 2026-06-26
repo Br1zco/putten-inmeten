@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.1</title>
+  <title>Putten Inmeten v2.2beta</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   
@@ -104,6 +104,12 @@
       font-weight: 500;
     }
 
+.lba-logo {
+      height: 28px;
+      width: auto;
+      display: block;
+    }
+
     label:first-child { margin-top: 0; }
 
     input, select {
@@ -151,12 +157,6 @@
       background: var(--gevaar);
       color: var(--gevaar-tekst);
       border-color: var(--gevaar);
-    }
-
-    .btn-rood {
-      background: var(--oranje);
-      color: #ffffff;
-      border-color: var(--oranje);
     }
 
     .btn-oranje {
@@ -309,8 +309,8 @@
       background: var(--accent-licht);
       color: var(--accent-tekst);
       border-radius: 6px;
-      padding: 8px 10px;
-      font-size: 0.85rem;
+      padding: 6px 9px;
+      font-size: 0.74rem;
       margin-top: 6px;
       display: none;
       font-weight: 600;
@@ -357,6 +357,32 @@
       max-width: calc(100% - 32px);
       text-align: center;
     }
+	
+	.app-subtitel {
+      font-size: 0.72rem;
+      color: var(--subtekst);
+      font-weight: 500;
+      margin-top: 1px;
+    }
+	
+	/* TIJDELIJK: GPS debug indicator */
+    #gps-debug {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      z-index: 500;
+      display: none;
+      min-width: 120px;
+      line-height: 1.5;
+    }
+	
+	
 
     /* ======= RADIO BUTTONS ======= */
     .radio-groep {
@@ -410,7 +436,7 @@
     .btn-verwijder {
       width: 28px; height: 28px; min-width: 28px;
       border-radius: 50%;
-      background: #e74c3c;
+      background: var(--gevaar);
       color: white;
       border: none;
       font-size: 15px;
@@ -467,20 +493,34 @@
 
 <div class="melding" id="melding"></div>
 
+<div id="gps-debug"></div>
+
 <!-- SCHERM: PROJECTEN -->
 <div id="s-projecten" class="scherm">
   <div class="app-header">
-    <div class="app-titel">⬡ Putten Inmeten</div>
+	<div style="display:flex;align-items:flex-start;gap:6px;">
+      <img src="./logo-lba.png" class="lba-logo" alt="⬡">
+      <div>
+        <div class="app-titel">Putten Inmeten</div>
+        <div class="app-subtitel">Hoofdpagina</div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
     <h2>Nieuw project</h2>
     <label>Projectnaam</label>
     <input type="text" id="np-naam" placeholder="bijv. LB10261805 Groenlo Barkenkamp" oninput="hoofdlettersPerWoord(this)">
-    <label>Initialen</label>
-    <input type="text" id="np-initialen" placeholder="bijv. PD" oninput="naarHoofdletters(this)" maxlength="6">
-    <label>Datum</label>
-    <input type="date" id="np-datum">
+    <div class="invoer-rij" style="margin-top:10px;">
+      <div>
+        <label>Initialen</label>
+        <input type="text" id="np-initialen" placeholder="bijv. PD" oninput="naarHoofdletters(this)" maxlength="6">
+      </div>
+      <div>
+        <label>Datum</label>
+        <input type="date" id="np-datum">
+      </div>
+    </div>
     <button class="btn btn-primair" onclick="projectAanmaken()">Project aanmaken</button>
   </div>
 
@@ -490,14 +530,20 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.1 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.2beta · Patrick Duteweerd · 2026
   </div>
 </div>
 
 <!-- SCHERM: PUTTEN LIJST -->
 <div id="s-putten" class="scherm">
   <div class="app-header">
-    <div class="app-titel">⬡ Putten Inmeten</div>
+	<div style="display:flex;align-items:flex-start;gap:6px;">
+      <img src="./logo-lba.png" class="lba-logo" alt="⬡">
+      <div>
+        <div class="app-titel">Putten Inmeten</div>
+        <div class="app-subtitel">Projectpagina</div>
+      </div>
+    </div>
     <button class="btn btn-small" onclick="naarProjecten()">← Terug</button>
   </div>
 
@@ -540,7 +586,13 @@
 <!-- SCHERM: PUT DETAIL -->
 <div id="s-put-detail" class="scherm">
   <div class="app-header">
-    <div class="app-titel">⬡ Putten Inmeten</div>
+	<div style="display:flex;align-items:flex-start;gap:6px;">
+      <img src="./logo-lba.png" class="lba-logo" alt="⬡">
+      <div>
+        <div class="app-titel">Putten Inmeten</div>
+        <div class="app-subtitel">Put detailpagina</div>
+      </div>
+    </div>
     <button class="btn btn-small" onclick="naarPuttenLijst()">← Terug</button>
   </div>
 
@@ -648,30 +700,45 @@
       </div>
     </div>
     <div class="diam-voorstel" id="a-diam-voorstel"></div>
+	<div class="diam-voorstel" id="a-bob-hint" style="display:none;"></div>
 
-    <label>Diameter (mm)</label>
-    <select id="a-diam">
-      <option value="">— kies —</option>
-      <option>110</option><option>125</option><option>160</option>
-      <option>200</option><option>250</option><option>300</option>
-      <option>315</option><option>400</option><option>500</option>
-      <option>600</option><option>700</option><option>800</option>
-      <option>900</option><option>1000</option><option>1200</option>
-	  <option>1250</option><option>1400</option><option>1500</option>
-	  <option>1600</option><option>1800</option><option>2000</option><option>9999</option>
-    </select>
+    <div class="invoer-rij" style="margin-top:6px;">
+      <div>
+        <label>Diameter (mm)</label>
+        <select id="a-diam">
+          <option value="">— kies —</option>
+          <option>110</option><option>125</option><option>160</option>
+          <option>200</option><option>250</option><option>300</option>
+          <option>315</option><option>400</option><option>500</option>
+          <option>600</option><option>700</option><option>800</option>
+          <option>900</option><option>1000</option><option>1200</option>
+          <option>1250</option><option>1400</option><option>1500</option>
+          <option>1600</option><option>1800</option><option>2000</option><option>9999</option>
+        </select>
+      </div>
+      <div>
+        <label>Gaat naar put <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></label>
+        <select id="a-koppelput" onchange="aansluitingKoppelputGewijzigd()">
+          <option value="">— geen —</option>
+        </select>
+      </div>
+    </div>
+    <div id="a-nieuwe-put-wrap" style="display:none;margin-top:6px;">
+      <input type="text" id="a-nieuwe-put-id" placeholder="Nieuw put ID, bijv. G-1043">
+      <button class="btn btn-primair" onclick="aansluitingNieuwePutAanmaken()" style="margin-top:6px;">Put aanmaken &amp; koppelen</button>
+    </div>
 
     <div class="invoer-rij" style="margin-top:10px;">
       <div>
         <label>Vorm</label>
-        <select id="a-vorm">
+        <select id="a-vorm" onchange="scrollNaarOpslaan()">
           <option value="">— kies —</option>
           <option>Rond</option><option>Ovaal</option><option>Onbekend</option>
         </select>
       </div>
       <div>
         <label>Materiaal</label>
-        <select id="a-mat">
+        <select id="a-mat" onchange="scrollNaarOpslaan()">
           <option value="">— kies —</option>
           <option>Beton</option><option>PVC</option><option>Ribbel</option><option>Beton + Reline</option><option>Keramiek</option>
         </select>
@@ -679,13 +746,13 @@
     </div>
 
     <label>Opmerking</label>
-    <textarea id="a-opmerking" placeholder="Optioneel" rows="3" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--rand);background:var(--invoer-bg);color:var(--tekst);font-size:1rem;resize:none;font-family:inherit;"></textarea>
+    <textarea id="a-opmerking" placeholder="Optioneel" rows="1" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--rand);background:var(--invoer-bg);color:var(--tekst);font-size:1rem;resize:none;font-family:inherit;" onfocus="scrollNaarOpslaan()"></textarea>
 	
-	<label>Stromingsrichting</label>
+	<label style="margin-bottom:-4px;">Stromingsrichting</label>
     <div class="btn-rij" style="margin-bottom:4px;">
-      <button type="button" id="sr-leeg"       class="btn btn-small sr-knop" onclick="srKiezen('')">Onbekend</button>
-      <button type="button" id="sr-naar-deze"  class="btn btn-small sr-knop" onclick="srKiezen('naar-deze')">→ Naar deze put</button>
-      <button type="button" id="sr-naar-volgende" class="btn btn-small sr-knop" onclick="srKiezen('naar-volgende')">→ Naar volgende</button>
+      <button type="button" id="sr-leeg"       class="btn btn-small sr-knop" onclick="srKiezen('');scrollNaarOpslaan()">Onbekend</button>
+      <button type="button" id="sr-naar-deze"  class="btn btn-small sr-knop" onclick="srKiezen('naar-deze');scrollNaarOpslaan()">→ Naar deze put</button>
+      <button type="button" id="sr-naar-volgende" class="btn btn-small sr-knop" onclick="srKiezen('naar-volgende');scrollNaarOpslaan()">→ Naar volgende</button>
     </div>
 
     <div class="btn-rij" style="margin-top:10px;">
@@ -735,19 +802,6 @@
   </div>
 </div>
 
-<!-- MODAL: PROJECT -->
-<div class="modal-overlay" id="m-project">
-  <div class="modal">
-    <h2 id="m-project-titel"></h2>
-    <div id="m-project-inhoud"></div>
-    <div class="btn-rij" style="margin-top:12px;">
-      <button class="btn btn-gevaar" onclick="projectVerwijderen()">Verwijderen</button>
-      <button class="btn btn-oranje" onclick="projectOpenen(modalProjectIdx)">Openen</button>
-    </div>
-    <button class="btn" onclick="modalSluiten('m-project')" style="margin-top:8px;">Annuleren</button>
-  </div>
-</div>
-
 <input type="file" id="camera-input" accept="image/*" capture="environment">
 
 
@@ -757,11 +811,14 @@
   const FOTO_KWALITEIT   = 0.75;
   const FSA_ONDERSTEUND = ('showDirectoryPicker' in window);
   
-  let fotoMapHandle = null; // FileSystemDirectoryHandle of null
+  let fotoMapHandle = null;
   let app = { globalTeller: 0, projecten: [], actiefIdx: null };
   let actiefPutIdx    = null;
-  let modalProjectIdx = null;
   let _gps            = null;
+  let _gpsWatchId     = null;
+  let _gpsFixes       = [];
+  let _gpsStopTimer   = null;
+  let _gpsAantalFotos = 0;
   let putLadenBezig   = false;
   let overstortPlaatsModus = false;
   let overstortJuistGeplaatst = false;
@@ -996,6 +1053,15 @@ async function fotoVerwijderenUitMap(naam) {
   }
 }
 
+function scrollNaarOpslaan() {
+    setTimeout(() => {
+      const card = document.getElementById('card-aansluiting');
+      if (!card) return;
+      const onderKant = card.getBoundingClientRect().bottom + window.pageYOffset;
+      window.scrollTo({ top: onderKant - window.innerHeight + 40, behavior: 'smooth' });
+    }, 300);
+  }
+
   // =====================
   // FOTO COMPRESSIE
   // =====================
@@ -1029,6 +1095,162 @@ async function fotoVerwijderenUitMap(naam) {
   function dichtstbijzijndeDiam(mm) {
     return DIAMS.reduce((a, b) => Math.abs(b - mm) < Math.abs(a - mm) ? b : a);
   }
+  
+  // =====================
+  // RD-COÖRDINAAT (indicatief) — opgebouwd uit GPS-fixes tijdens fotomomenten
+  // =====================
+  function wgs84NaarRD(lat, lon) {
+    // Benaderingsformule Schreutelkamp & Strang van Hees — nauwkeurig tot enkele meters,
+    // bedoeld als indicatie, geen vervanging van de total-station/GPS meting van de putdeksel.
+    const phi0 = 52.15517440;
+    const lam0 = 5.38720621;
+    const x0 = 155000.00;
+    const y0 = 463000.00;
+    const dPhi = 0.36 * (lat - phi0);
+    const dLam = 0.36 * (lon - lam0);
+    const Rpq_x = [
+      [0,1, 190094.945],[1,1, -11832.228],[2,1, -114.221],[0,3, -32.391],
+      [1,0, -0.705],[3,1, -2.340],[1,3, -0.608],[0,2, -0.008],[2,3, 0.148]
+    ];
+    const Rpq_y = [
+      [1,0, 309056.544],[0,2, 3638.893],[2,0, 73.077],[1,2, -157.984],
+      [3,0, 59.788],[0,1, 0.433],[2,2, -6.439],[1,1, -0.032],[0,4, 0.092],[1,4, -0.054]
+    ];
+    let dX = 0, dY = 0;
+    for (const [p, q, c] of Rpq_x) dX += c * Math.pow(dPhi, p) * Math.pow(dLam, q);
+    for (const [p, q, c] of Rpq_y) dY += c * Math.pow(dPhi, p) * Math.pow(dLam, q);
+    return { x: x0 + dX, y: y0 + dY };
+  }
+
+  function fotoGemiddeldeGps(fotos) {
+    const metGps = (fotos || []).filter(f => f.gps && f.gps.lat && f.gps.lon);
+    if (!metGps.length) return null;
+    let sumLat = 0, sumLon = 0;
+    for (const f of metGps) {
+      sumLat += parseFloat(f.gps.lat);
+      sumLon += parseFloat(f.gps.lon);
+    }
+    return { lat: sumLat / metGps.length, lon: sumLon / metGps.length };
+  }
+
+  // Verzamelt 5 sec GPS-fixes na een foto, voegt toe aan de lopende pot van de put,
+  // en toetst het resultaat tegen het gemiddelde van de foto-GPS-punten.
+  function gpsDebug(tekst, kleur) {
+    const el = document.getElementById('gps-debug');
+    if (!el) return;
+    el.style.borderLeft = `4px solid ${kleur}`;
+    el.textContent      = tekst;
+  }
+  
+  function gpsStarten() {
+  if (!navigator.geolocation) {
+    gpsDebug('GPS niet beschikbaar', '#c0392b');
+    return;
+  }
+  _gpsFixes       = [];
+  _gpsAantalFotos = 0;
+  if (_gpsWatchId !== null) navigator.geolocation.clearWatch(_gpsWatchId);
+  if (_gpsStopTimer) { clearTimeout(_gpsStopTimer); _gpsStopTimer = null; }
+
+  const el = document.getElementById('gps-debug');
+  if (el) el.style.display = 'block';
+  gpsDebug('📡 GPS opwarmen…', '#ed6f26');
+  
+  setTimeout(() => {
+  if (_gpsWatchId !== null) {
+    navigator.geolocation.clearWatch(_gpsWatchId);
+    _gpsWatchId = null;
+  }
+  gpsDebug('GPS gestopt (timeout)', '#555555');
+  setTimeout(() => {
+    const el = document.getElementById('gps-debug');
+    if (el) el.style.display = 'none';
+  }, 3000);
+}, 30000); // 30 sec
+
+  _gpsWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const acc = pos.coords.accuracy;
+      if (acc > 50) return; // ruis weggooien
+      const fix = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        acc: Math.round(acc),
+        ts:  Date.now()
+      };
+      _gpsFixes.push(fix);
+      _gps = gpsBesteFix();
+      gpsDebug(
+        `📡 GPS ±${fix.acc}m · ${_gpsFixes.length} fixes\n` +
+        (_gps ? `${_gps.lat} ${_gps.lon}` : ''),
+        acc <= 15 ? '#0f6434' : '#ed6f26'
+      );
+    },
+    () => gpsDebug('❌ GPS fout', '#c0392b'),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+  );
+}
+
+function gpsStoppenNa10sec() {
+  if (_gpsStopTimer) clearTimeout(_gpsStopTimer);
+  _gpsStopTimer = setTimeout(() => {
+    if (_gpsWatchId !== null) {
+      navigator.geolocation.clearWatch(_gpsWatchId);
+      _gpsWatchId = null;
+    }
+	
+	const el2 = document.getElementById('gps-debug');
+    if (el2) el2.style.display = 'block';
+
+    gpsDebug('GPS gestopt', '#555555');
+    setTimeout(() => {
+      const el = document.getElementById('gps-debug');
+      if (el) el.style.display = 'none';  // verberg na stoppen (voor productie)
+    }, 3000);
+  }, 10000);
+}
+
+function gpsBesteFix() {
+  if (!_gpsFixes.length) return null;
+
+  // Eerste ronde gemiddelde
+  const gemLat = _gpsFixes.reduce((s, f) => s + f.lat, 0) / _gpsFixes.length;
+  const gemLon = _gpsFixes.reduce((s, f) => s + f.lon, 0) / _gpsFixes.length;
+
+  // Filter uitschieters >30m van het gemiddelde
+  function afstandM(lat1, lon1, lat2, lon2) {
+    const R   = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a   = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  const gefilterd = _gpsFixes.filter(f => afstandM(gemLat, gemLon, f.lat, f.lon) <= 30);
+  const bron = gefilterd.length >= 3 ? gefilterd : _gpsFixes; // min 3 fixes voor filtering
+
+  const lat = bron.reduce((s, f) => s + f.lat, 0) / bron.length;
+  const lon = bron.reduce((s, f) => s + f.lon, 0) / bron.length;
+  const acc = Math.round(bron.reduce((s, f) => s + f.acc, 0) / bron.length);
+
+  return {
+    lat: lat.toFixed(6),
+    lon: lon.toFixed(6),
+    acc
+  };
+}
+
+  function putLocatieRD(put) {
+    const gem = fotoGemiddeldeGps(put.fotos);
+    if (!gem) return null;
+    const rd = wgs84NaarRD(gem.lat, gem.lon);
+    return { x: Math.round(rd.x), y: Math.round(rd.y) };
+  }
+
+  function rdLabelHtml(rd) {
+    if (!rd) return '';
+    return `<span class="rd-coord">X: ${rd.x} &nbsp; Y: ${rd.y}</span>`;
+  }
 
   // =====================
   // PROJECTEN
@@ -1040,6 +1262,12 @@ async function fotoVerwijderenUitMap(naam) {
     if (!naam)  { alert('Vul een projectnaam in.'); return; }
     if (!init)  { alert('Vul initialen in.'); return; }
     if (!datum) { alert('Vul een datum in.'); return; }
+
+    // Duplicaat-detectie projectnaam — zachte waarschuwing, geen blokkade
+    if (app.projecten.some(p => p.naam.toLowerCase() === naam.toLowerCase())) {
+      if (!confirm(`Een project met de naam "${naam}" bestaat al.\nToch aanmaken?`)) return;
+    }
+
     initOpslaan(init);
     app.projecten.push({ naam, init, datum, putten: [] });
     opslaan();
@@ -1070,25 +1298,10 @@ async function fotoVerwijderenUitMap(naam) {
     }).join('');
   }
 
-  function projectOpenenOfBekijken(idx) {
-    modalProjectIdx = idx;
-    const p = app.projecten[idx];
-    document.getElementById('m-project-titel').textContent = p.naam;
-    let html = `<div style="font-size:0.85rem;color:var(--subtekst);margin-bottom:10px;">${p.init} · ${p.datum}</div>`;
-    html += !p.putten.length
-      ? '<div class="leeg">Geen putten in dit project.</div>'
-      : p.putten.map(put => `<div class="lijst-item"><div>
-          <div class="lijst-item-naam">PUT ${put.id}</div>
-          <div class="lijst-item-meta">${(put.fotos||[]).length} foto('s)</div>
-        </div></div>`).join('');
-    document.getElementById('m-project-inhoud').innerHTML = html;
-    modalOpenen('m-project');
-  }
 
   function projectOpenen(idx) {
     app.actiefIdx = idx;
     opslaan();
-    modalSluiten('m-project');
     alleFotosLaden().then(() => {
       const p = app.projecten[idx];
       document.getElementById('putten-project-naam').textContent = p.naam;
@@ -1120,19 +1333,6 @@ async function fotoVerwijderenUitMap(naam) {
     opslaan();
     projectLijstTekenen();
 	naarProjecten();
-  }
-
-  function projectVerwijderen() {
-    const p = app.projecten[modalProjectIdx];
-    if (!confirm(`Project "${p.naam}" definitief verwijderen?`)) return;
-    for (const put of p.putten)
-      for (const f of (put.fotos || [])) fotoVerwijderenDB(f.naam);
-    app.projecten.splice(modalProjectIdx, 1);
-    if (app.actiefIdx === modalProjectIdx) app.actiefIdx = null;
-    else if (app.actiefIdx > modalProjectIdx) app.actiefIdx--;
-    opslaan();
-    modalSluiten('m-project');
-    projectLijstTekenen();
   }
 
   function naarProjecten() {
@@ -1223,12 +1423,12 @@ function putCompleet(put) {
 
     if (put.aansluitingen && put.aansluitingen.length > 0) {
       document.getElementById('t-aantal').value = put.aansluitingen.length;
-    document.getElementById('card-tekening').style.display = 'block';
-	document.getElementById('btn-overstort').style.display  = 'block';
-    document.getElementById('noord-label').style.display = 'block';
-	document.getElementById('kompas-wrap').style.display = 'flex';
-    document.getElementById('tekening-uitleg').style.display = 'block';
-    setTimeout(() => { initCanvas(); putCanvasTekenen(); kompasStarten(); }, 80);
+      document.getElementById('card-tekening').style.display = 'block';
+	  document.getElementById('btn-overstort').style.display  = 'block';
+      document.getElementById('noord-label').style.display = 'block';
+	  document.getElementById('kompas-wrap').style.display = 'flex';
+      document.getElementById('tekening-uitleg').style.display = 'block';
+      setTimeout(() => { initCanvas(); putCanvasTekenen(); kompasStarten(); }, 80);
     } else {
       document.getElementById('card-tekening').style.display = 'none';
       document.getElementById('noord-label').style.display = 'none';
@@ -1242,10 +1442,34 @@ function putCompleet(put) {
     fotoGridTekenen();
     toonScherm('s-put-detail');
 	putLadenBezig = false;
+	gpsStarten();
+  }
+
+  function putOntbreekt(put) {
+    const manko = [];
+    if ((put.fotos || []).length < 2) manko.push(`foto's (${(put.fotos||[]).length} van 2)`);
+    if (!put.type) manko.push('type put');
+    if (!(put.aansluitingen || []).some(a => a.bob)) manko.push('BOB van minstens 1 aansluiting');
+    return manko;
   }
 
   function naarPuttenLijst() {
+    if (actiefPutIdx !== null && app.actiefIdx !== null) {
+      const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+      if (put && !putCompleet(put)) {
+        const manko = putOntbreekt(put);
+        const tekst = `Put ${put.id} is nog niet compleet.\n\nOntbreekt:\n• ${manko.join('\n• ')}\n\nToch teruggaan?`;
+        if (!confirm(tekst)) return;
+      }
+    }
     kompasStappen();
+if (_gpsWatchId !== null) {
+  navigator.geolocation.clearWatch(_gpsWatchId);
+  _gpsWatchId = null;
+}
+if (_gpsStopTimer) { clearTimeout(_gpsStopTimer); _gpsStopTimer = null; }
+gpsDebug('GPS gestopt', '#555555');
+
     puttenLijstTekenen();
     toonScherm('s-putten');
   }
@@ -1320,12 +1544,6 @@ function putStatusGewijzigd() {
   }
 }
 
-function typeAansluitingenOpslaan() {
-    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
-    put.type = document.getElementById('m-type').value;
-    opslaan();
-    toonMelding('Type opgeslagen ✓');
-  }
 
   function typePutGewijzigd() {
     if (actiefPutIdx === null || app.actiefIdx === null) return;
@@ -1496,6 +1714,29 @@ function typeAansluitingenOpslaan() {
         ctx.fillText(`⌀${a.diam}`, ix, iy);
       }
 
+      // Koppelput label aan de andere kant van de lijn — groen, zelfde als aansluiting-tabel
+      if (a.koppelput) {
+        const numAfstand  = putStraal + lijnLengte;
+        const loodRad     = rad + Math.PI / 2;
+        const offset      = 38;
+        const kx = midden.x + Math.cos(rad) * numAfstand + Math.cos(loodRad) * -offset;
+        const ky = midden.y + Math.sin(rad) * numAfstand + Math.sin(loodRad) * -offset;
+        const tekst = `→ ${a.koppelput}`;
+        const fontSize = Math.round(putStraal * 0.26);
+        ctx.font = `bold ${fontSize}px Arial`;
+        const tw = ctx.measureText(tekst).width;
+        const pad = 4;
+        ctx.fillStyle = '#e8f4ec';
+        ctx.fillRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+        ctx.strokeStyle = '#0a4d27';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+        ctx.fillStyle = '#0a4d27';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tekst, kx, ky);
+      }
+
       // Stromingsrichting pijl
       if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
         const pijlAfstand = putStraal + lijnLengte * 0.5;
@@ -1657,9 +1898,7 @@ function kompasTeekenen(hoek) {
   cx.font = 'bold 9px Arial';
   cx.textAlign = 'center';
   cx.textBaseline = 'middle';
-  // N positie volgt de rotatie mee
-  const nx = midden + Math.sin(-rad) * -13;  // correct: sin voor x, cos voor y bij rotatie
-  const ny = midden - Math.cos(-rad) * 13;   // wacht, simpeler:
+
   // Vaste N bovenaan de pijl:
   cx.fillText('N', midden + Math.sin(rad) * -13, midden - Math.cos(rad) * 13);
 }
@@ -2014,6 +2253,7 @@ function onMouseUp(e) {
     document.getElementById('a-diam-voorstel').style.display = 'none';
     srKiezen(a.stroom || '');
     if (a.bob && a.bbb) aansluiting_berekenDiam();
+	aansluitingKoppelputSelectLaden(a.koppelput || '');
     document.getElementById('card-aansluiting').style.display = 'block';
     setTimeout(() => {
       document.getElementById('card-aansluiting').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2021,18 +2261,61 @@ function onMouseUp(e) {
   }
 
   function aansluiting_berekenDiam() {
-    const bob = parseFloat(document.getElementById('a-bob').value);
-    const bbb = parseFloat(document.getElementById('a-bbb').value);
-    const el  = document.getElementById('a-diam-voorstel');
-    const sel = document.getElementById('a-diam');
-    if (!isNaN(bob) && !isNaN(bbb) && bob > bbb) {
-      const mm = (bob - bbb) * 10;
+    const bob  = parseFloat(document.getElementById('a-bob').value);
+    const bbb  = parseFloat(document.getElementById('a-bbb').value);
+    const el   = document.getElementById('a-diam-voorstel');
+    const hint = document.getElementById('a-bob-hint');
+    const sel  = document.getElementById('a-diam');
+
+    const bobGevuld = !isNaN(bob) && document.getElementById('a-bob').value !== '';
+    const bbbGevuld = !isNaN(bbb) && document.getElementById('a-bbb').value !== '';
+
+    el.style.display   = 'none';
+    hint.style.display = 'none';
+    hint.textContent   = '';
+
+    // BOB ingevuld maar BBB leeg → niet te berekenen, stel 9999 voor
+    if (bobGevuld && !bbbGevuld) {
+      el.style.display = 'block';
+      el.textContent   = 'BBB ontbreekt → voorstel: 9999 (niet bepaald)';
+      sel.value        = '9999';
+      return;
+    }
+
+    // Validatie A: BOB ≤ BBB — fysiek onmogelijk
+    if (bobGevuld && bbbGevuld && bob <= bbb) {
+      hint.style.background = 'var(--gevaar)';
+      hint.style.color      = '#ffffff';
+      hint.style.display    = 'block';
+      hint.textContent      = '⚠ BOB moet groter zijn dan BBB — controleer je invoer.';
+      return;
+    }
+
+    // Beide ingevuld en BOB > BBB
+    if (bobGevuld && bbbGevuld && bob > bbb) {
+      const verschil = bob - bbb;
+      const mm       = verschil * 10;
+
+      // Boven 2000mm → niet meer betrouwbaar te meten, stel 9999 voor
+      if (mm > 2000) {
+        el.style.display = 'block';
+        el.textContent   = `BOB − BBB = ${verschil} cm = ${mm} mm → boven 2m, voorstel: 9999`;
+        sel.value        = '9999';
+        return;
+      }
+
       const diam = dichtstbijzijndeDiam(mm);
       el.style.display = 'block';
-      el.textContent = `BOB − BBB = ${bob - bbb} cm → voorstel: ${diam} mm`;
-      sel.value = String(diam);
-    } else {
-      el.style.display = 'none';
+      el.textContent   = `BOB − BBB = ${verschil} cm → voorstel: ${diam} mm`;
+      sel.value        = String(diam);
+
+      // Validatie B: verschil > 1000 cm — vermoedelijke typefout
+      if (verschil > 1000) {
+        hint.style.background = 'var(--oranje)';
+        hint.style.color      = '#ffffff';
+        hint.style.display    = 'block';
+        hint.textContent      = `⚠ Verschil van ${verschil} cm lijkt erg groot — typefout?`;
+      }
     }
   }
 
@@ -2047,7 +2330,8 @@ function aansluitingOpslaan() {
       vorm:      document.getElementById('a-vorm').value,
       mat:       document.getElementById('a-mat').value,
       opmerking: document.getElementById('a-opmerking').value,
-      stroom:    document.getElementById('a-stroom').value
+      stroom:    document.getElementById('a-stroom').value,
+      koppelput: (() => { const v = document.getElementById('a-koppelput').value; return v === '__nieuw' ? '' : v; })()
     };
     opslaan();
     document.getElementById('card-aansluiting').style.display = 'none';
@@ -2062,6 +2346,37 @@ function aansluitingOpslaan() {
     document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+function aansluitingKoppelputSelectLaden(huidig) {
+    const project = app.projecten[app.actiefIdx];
+    const sel = document.getElementById('a-koppelput');
+    sel.innerHTML = '<option value="">— onbekend —</option>' +
+      project.putten
+        .filter((_, i) => i !== actiefPutIdx)
+        .map(p => `<option value="${p.id}" ${p.id === (huidig || '') ? 'selected' : ''}>${p.id}</option>`)
+        .join('') +
+      '<option value="__nieuw">＋ Nieuwe put</option>';
+    document.getElementById('a-nieuwe-put-wrap').style.display = 'none';
+  }
+
+  function aansluitingKoppelputGewijzigd() {
+    const val = document.getElementById('a-koppelput').value;
+    document.getElementById('a-nieuwe-put-wrap').style.display = val === '__nieuw' ? 'block' : 'none';
+  }
+
+  function aansluitingNieuwePutAanmaken() {
+    const id      = document.getElementById('a-nieuwe-put-id').value.trim();
+    const project = app.projecten[app.actiefIdx];
+    if (!id) { alert('Vul een put ID in.'); return; }
+    if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
+    project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '', overstort: null });
+    opslaan();
+    aansluitingKoppelputSelectLaden(id);
+    document.getElementById('a-koppelput').value = id;
+    document.getElementById('a-nieuwe-put-wrap').style.display = 'none';
+    document.getElementById('a-nieuwe-put-id').value = '';
+    toonMelding(`Put ${id} aangemaakt ✓`);
+  }
+  
 
 // =====================
 // OVERSTORT
@@ -2175,16 +2490,17 @@ function tekenOverstortOpCanvas(ctx2, put, mid, straal, ll, donker, isExport) {
 
     if (ov.koppelput) {
       // Links naast het lijn-nummer (90° links van de lijnrichting)
-      const numAfstand = straal + ll + (isExport ? 18 : 10);
+      // Aanpassen afstand isExport ? #rapport : #scherm (1e waarde in html export, 2e waarde op scherm)
+      const numAfstand = straal + ll + (isExport ? 18 : 1);
       const zijRad     = rad - Math.PI / 2;
       const zijOffset  = isExport ? 90 : 38;
       const lx = mid.x + Math.cos(rad) * numAfstand + Math.cos(zijRad) * zijOffset;
       const ly = mid.y + Math.sin(rad) * numAfstand + Math.sin(zijRad) * zijOffset;
-      const fontSize = isExport ? 32 : Math.round(straal * 0.28);
+      const fontSize = isExport ? 32 : Math.round(straal * 0.26);
       ctx2.font = `bold ${fontSize}px Arial`;
       const tekst = `→ ${ov.koppelput}`;
       const tw    = ctx2.measureText(tekst).width;
-      const pad   = isExport ? 14 : 5;
+      const pad   = isExport ? 14 : 4;
       ctx2.fillStyle = '#dce9f5';
       ctx2.fillRect(lx - tw/2 - pad, ly - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
       ctx2.strokeStyle = kleur;
@@ -2333,22 +2649,13 @@ function overstortAnnuleren() {
   // FOTO'S
   // =====================
 async function fotoMaken() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      pos => { _gps = { lat: pos.coords.latitude.toFixed(6), lon: pos.coords.longitude.toFixed(6), acc: Math.round(pos.coords.accuracy) }; },
-      ()  => { _gps = null; },
-      { enableHighAccuracy: true, timeout: 6000 }
-    );
-  }
+  _gps = gpsBesteFix(); // gebruik beste gemiddelde fix op dit moment
 
-  // Herstel opgeslagen map-handle als permissie nog niet actief is
   if (FSA_ONDERSTEUND && !fotoMapHandle) {
     const opgeslagen = await handleOphalenDB();
     if (opgeslagen) {
       const status = await opgeslagen.requestPermission({ mode: 'readwrite' });
-      if (status === 'granted') {
-        fotoMapHandle = opgeslagen;
-      }
+      if (status === 'granted') fotoMapHandle = opgeslagen;
     }
   }
 
@@ -2384,9 +2691,9 @@ document.getElementById('camera-input').addEventListener('change', async functio
   const project = app.projecten[app.actiefIdx];
   const put     = project.putten[actiefPutIdx];
   const nr      = (put.fotos ? put.fotos.length : 0) + 1;
-  const naam    = fotoNaam(put.id, project.init, nr);  // ← initialen toegevoegd (zie punt 5)
+  const naam    = fotoNaam(put.id, project.init, nr);
 
-try {
+  try {
     let data = await comprimeerFoto(file);
     if (_gps) data = gpsNaarExif(data, _gps);
 
@@ -2405,14 +2712,16 @@ try {
     if (!put.fotos) put.fotos = [];
     put.fotos.push({ naam, data, gps: _gps, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
 
-    _gps = null;
     opslaan();
     fotoGridTekenen();
     toonMelding(`Foto ${nr} opgeslagen ✓`);
+    _gpsAantalFotos++;
+    if (_gpsAantalFotos >= 2) gpsStoppenNa10sec();
+
   } catch(e) {
     alert('Foto fout: ' + (e && e.message ? e.message : JSON.stringify(e)));
   }
-  
+
   this.value = '';
 });
 
@@ -2471,9 +2780,6 @@ async function fotoVerwijderen(idx) {
     window.scrollTo(0, 0);
   }
 
-  function modalOpenen(id)  { document.getElementById(id).classList.add('actief'); }
-  function modalSluiten(id) { document.getElementById(id).classList.remove('actief'); }
-
   // =====================
   // OPSTARTEN
   // =====================
@@ -2497,12 +2803,24 @@ dbOpenen().then(async () => {
   
 }).catch(e => toonMelding('Database fout: ' + e));
   
+  
+  
+  
   // =====================
   // HTML EXPORT
   // =====================
 async function exporteerRapport() {
     const project = app.projecten[app.actiefIdx];
     if (!project) return;
+
+    const incompleetLijst = project.putten.filter(p => !putCompleet(p));
+    if (incompleetLijst.length > 0) {
+      const namen = incompleetLijst.map(p => p.id).join(', ');
+      const doorgaan = confirm(
+        `${incompleetLijst.length} put(ten) zijn nog niet compleet:\n${namen}\n\nToch doorgaan met het rapport?`
+      );
+      if (!doorgaan) return;
+    }
 
     function htmlEsc(str) {
       return String(str || '')
@@ -2514,17 +2832,6 @@ async function exporteerRapport() {
 
     toonMelding('Rapport wordt opgebouwd…', 8000);
 	try {
-
-for (const put of project.putten) {
-  for (const f of (put.fotos || [])) {
-    if (!f.data && FSA_ONDERSTEUND && fotoMapHandle) {
-      f.data = await fotoLezenUitMap(f.naam);
-    }
-    if (!f.data && db) {
-      f.data = await fotoOphalenDB(f.naam);
-    }
-  }
-}
 
     const offscreenCanvasses = {};
     for (const put of project.putten) {
@@ -2616,6 +2923,29 @@ for (const put of project.putten) {
             octx.textBaseline = 'middle';
             octx.fillText(`⌀${a.diam}`, ix, iy);
           }
+		  
+		  if (a.koppelput) {
+            const numAfstand   = ocStr + ocLL + 18;
+            const loodRad      = rad + Math.PI / 2;
+            const koppelOffset = 90;
+            const kx = ocMid.x + Math.cos(rad) * numAfstand + Math.cos(loodRad) * -koppelOffset;
+            const ky = ocMid.y + Math.sin(rad) * numAfstand + Math.sin(loodRad) * -koppelOffset;
+            const tekst = `→ ${a.koppelput}`;
+            const fontSize = Math.round(ocStr * 0.26);
+            octx.font = `bold ${fontSize}px Arial`;
+            const tw = octx.measureText(tekst).width;
+            const pad = 8;
+            octx.fillStyle = '#e8f4ec';
+            octx.fillRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+            octx.strokeStyle = '#0a4d27';
+            octx.lineWidth = 1.5;
+            octx.strokeRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+            octx.fillStyle = '#0a4d27';
+            octx.textAlign = 'center';
+            octx.textBaseline = 'middle';
+            octx.fillText(tekst, kx, ky);
+          }
+		  
 
           if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
             const pijlAfstand = ocStr + ll * 0.5;
@@ -2643,6 +2973,7 @@ for (const put of project.putten) {
         offscreenCanvasses[put.id] = oc.toDataURL('image/png');
       }
     }
+
 
     const datum = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     // Samenvatting berekenen
@@ -2674,10 +3005,10 @@ const samenvattingHTML = `
     </table>
 <table class="sam-tabel">
       <tr><td class="sam-icon sam-compleet">✓</td><td class="sam-compleet">Compleet</td><td class="sam-compleet">${compleetLijst.length} van ${totaal}</td></tr>
-      ${onvolledigNamen ? `<tr><td class="sam-icon sam-onvolledig">○</td><td class="sam-onvolledig">Onvolledig</td><td class="sam-onvolledig">${onvolledigLijst.length} — ${onvolledigNamen}</td></tr>` : ''}
-      ${metOverstort ? `<tr><td class="sam-icon">💧</td><td>Overstort</td><td>${metOverstort} — ${metOverstortNamen}</td></tr>` : ''}
-      ${nietToegankelijk ? `<tr><td class="sam-icon sam-waarschuwing">⚠</td><td class="sam-waarschuwing">Niet toegankelijk</td><td class="sam-waarschuwing">${nietToegankelijk} — ${nietToegankelijkNamen}</td></tr>` : ''}
-      <tr><td class="sam-icon">📷</td><td>Foto's</td><td>${aantalFotos}</td></tr>
+      <tr><td class="sam-icon sam-onvolledig">○</td><td class="sam-onvolledig">Onvolledig</td><td class="sam-onvolledig">${onvolledigLijst.length}${onvolledigNamen ? ` ⟶ namelijk put ${onvolledigNamen}` : ''}</td></tr>
+      <tr><td class="sam-icon">💧</td><td>Overstort</td><td>${metOverstort}${metOverstortNamen ? ` ⟶ namelijk put ${metOverstortNamen}` : ''}</td></tr>
+      <tr><td class="sam-icon sam-waarschuwing">⚠</td><td class="sam-waarschuwing">Niet toegankelijk</td><td class="sam-waarschuwing">${nietToegankelijk}${nietToegankelijkNamen ? ` ⟶ namelijk put ${nietToegankelijkNamen}` : ''}</td></tr>
+      <tr><td class="sam-icon">📷</td><td style="font-weight:600;">Foto's</td><td style="font-weight:600;">${aantalFotos}</td></tr>
     </table>
   </div>
 </div>`;
@@ -2708,9 +3039,9 @@ for (const put of project.putten) {
           aanslHTML += `<div class="tabel-wrap"><table class="aansl-tabel">
             <colgroup>
               <col class="nr"><col class="bob"><col class="bbb">
-              <col class="diam"><col class="vorm"><col class="mat">
+              <col class="diam"><col class="vorm"><col class="mat"><col class="put">
             </colgroup>
-            <thead><tr><th>#</th><th>BOB</th><th>BBB</th><th>⌀</th><th>Vorm</th><th>Mat.</th></tr></thead>
+            <thead><tr><th>#</th><th>BOB</th><th>BBB</th><th>⌀</th><th>Vorm</th><th>Materiaal</th><th>Van/naar put</th></tr></thead>
             <tbody>`;
           put.aansluitingen.forEach((a, i) => {
             aanslHTML += `<tr>
@@ -2720,6 +3051,7 @@ for (const put of project.putten) {
               <td>${a.diam ? a.diam + ' mm' : '—'}</td>
               <td>${a.vorm || '—'}</td>
               <td>${a.mat || '—'}</td>
+			  <td>${a.koppelput ? htmlEsc(a.koppelput) : '—'}</td>
             </tr>`;
             if (a.opmerking) {
               aanslHTML += `<tr class="opm-rij"><td></td><td colspan="5">${htmlEsc(a.opmerking)}</td></tr>`;
@@ -2746,7 +3078,7 @@ aanslHTML += `</div></div>`;
         }
 
         putHTML += `<div class="put-blok">
-          <div class="put-kop">PUT ${htmlEsc(put.id)}${put.type ? ` <span class="type-tag">${put.type}</span>` : ''}</div>
+          <div class="put-kop"><span>PUT ${htmlEsc(put.id)}${put.type ? ` <span class="type-tag">${put.type}</span>` : ''}</span></div>
           ${algHTML}
 		  <div class="foto-regel ${heeftFotos ? '' : 'grijs'}">Foto\'s: &nbsp; ${heeftFotos ? fotoNamen : 'Geen foto\'s'}</div>
           ${aanslHTML}
@@ -2754,6 +3086,8 @@ aanslHTML += `</div></div>`;
       }
       putHTML += `</div>`;
 
+    const overzichtHTML = '';
+	  
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Rapport ${htmlEsc(project.naam)}</title>
@@ -2778,7 +3112,8 @@ aanslHTML += `</div></div>`;
       .sam-compleet { color: #0f6434; font-weight: 600; }
       .sam-onvolledig { color: #ed6f26; font-weight: 600; }
       .sam-waarschuwing { color: #c0392b; font-weight: 600; }
-      .put-kop { font-size: 15px; font-weight: bold; color: #0f6434; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+	  .put-kop { font-size: 15px; font-weight: bold; color: #0f6434; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+      .rd-coord { font-size: 12px; font-weight: 600; color: #555; white-space: nowrap; }
       .type-tag { background: #e8f4ec; color: #0a4d27; border-radius: 4px; padding: 1px 6px; font-size: 12px; font-weight: 600; margin-left: 5px; }
       .alg { font-size: 13px; margin-bottom: 4px; }
       .alg.rood { color: #c0392b; font-weight: 600; }
@@ -2794,6 +3129,10 @@ aanslHTML += `</div></div>`;
       .aansl-tabel col.diam { width: 68px; }
       .aansl-tabel col.vorm { width: 72px; }
       .aansl-tabel col.mat  { width: 100px; }
+	  .aansl-tabel col.put  { width: 98px; }
+	  // Vuistregel: neem je langste verwachte put ID, tel de tekens, vermenigvuldig met 8 en tel 16px padding op.
+      // Dus voor een ID van 8 tekens: 8×8 + 16 = 80px. Dat is een veilige minimumwaarde voor de meeste gevallen.
+	  
 	  .opm-rij td { color: #444; font-style: italic; padding: 3px 5px 6px 14px; border-top: none; font-size: 13px; }
     </style></head><body>
     <h1>${htmlEsc(project.naam)}</h1>
@@ -2856,27 +3195,35 @@ const url = URL.createObjectURL(blob);
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
+      .then(function(reg) {
+        reg.addEventListener('updatefound', function() {
+          const nieuweSW = reg.installing;
+          nieuweSW.addEventListener('statechange', function() {
+            if (nieuweSW.state === 'activated' && navigator.serviceWorker.controller) {
+              toonUpdateBanner();
+            }
+          });
+        });
+      })
       .catch(function(err) { console.warn('SW mislukt:', err); });
-
-    navigator.serviceWorker.addEventListener('message', function(event) {
-      if (event.data?.type === 'BIJGEWERKT') {
-        const banner = document.createElement('div');
-        banner.style.cssText = [
-          'position:fixed', 'bottom:20px', 'left:50%',
-          'transform:translateX(-50%)',
-          'background:#0f6434', 'color:#fff',
-          'border-radius:10px', 'padding:12px 20px',
-          'font-size:0.95rem', 'font-weight:600',
-          'z-index:999', 'cursor:pointer',
-          'box-shadow:0 3px 12px rgba(0,0,0,0.3)',
-          'text-align:center', 'max-width:calc(100% - 32px)'
-        ].join(';');
-        banner.textContent = '🔄 App bijgewerkt — tik om te verversen';
-        banner.onclick = () => window.location.reload();
-        document.body.appendChild(banner);
-      }
-    });
   });
+}
+
+function toonUpdateBanner() {
+  const banner = document.createElement('div');
+  banner.style.cssText = [
+    'position:fixed', 'bottom:20px', 'left:50%',
+    'transform:translateX(-50%)',
+    'background:#0f6434', 'color:#fff',
+    'border-radius:10px', 'padding:12px 20px',
+    'font-size:0.95rem', 'font-weight:600',
+    'z-index:999', 'cursor:pointer',
+    'box-shadow:0 3px 12px rgba(0,0,0,0.3)',
+    'text-align:center', 'max-width:calc(100% - 32px)'
+  ].join(';');
+  banner.textContent = '🔄 App bijgewerkt — tik om te verversen';
+  banner.onclick = () => window.location.reload();
+  document.body.appendChild(banner);
 }
   </script>
 </body>
