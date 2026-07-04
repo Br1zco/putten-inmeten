@@ -11,9 +11,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.2</title>
+  <title>Putten Inmeten v2.3</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@5.0.8/dist/jspdf.plugin.autotable.min.js"></script>
   
 <style>
 :root {
@@ -530,7 +532,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.2 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.3 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -577,7 +579,8 @@
 
 <div class="card">
     <h2>Exporteren</h2>
-    <button class="btn btn-primair" onclick="exporteerRapport()">🚀 Deel rapport</button>
+    <button class="btn btn-primair" onclick="exporteerRapportPDF()">📄 Deel als PDF</button>
+    <button class="btn" onclick="exporteerRapport()" style="margin-top:8px;">🌐 Deel als HTML</button>
     <button class="btn" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
     <div id="fotomap-pad" style="font-size:0.78rem;color:var(--subtekst);margin-top:5px;padding-left:4px;"></div>
   </div>
@@ -814,11 +817,8 @@
   let fotoMapHandle = null;
   let app = { globalTeller: 0, projecten: [], actiefIdx: null };
   let actiefPutIdx    = null;
-  let _gps            = null;
   let _gpsWatchId     = null;
-  let _gpsFixes       = [];
-  let _gpsStopTimer   = null;
-  let _gpsAantalFotos = 0;
+  let _gpsLaatsteFix  = null; // meest recente fix tijdens openstaande put-detail
   let putLadenBezig   = false;
   let overstortPlaatsModus = false;
   let overstortJuistGeplaatst = false;
@@ -1097,159 +1097,62 @@ function scrollNaarOpslaan() {
   }
   
   // =====================
-  // RD-COÖRDINAAT (indicatief) — opgebouwd uit GPS-fixes tijdens fotomomenten
+  // GPS — per foto de meest recente fix vastleggen (alleen voor EXIF, geen RD/kaart)
   // =====================
-  function wgs84NaarRD(lat, lon) {
-    // Benaderingsformule Schreutelkamp & Strang van Hees — nauwkeurig tot enkele meters,
-    // bedoeld als indicatie, geen vervanging van de total-station/GPS meting van de putdeksel.
-    const phi0 = 52.15517440;
-    const lam0 = 5.38720621;
-    const x0 = 155000.00;
-    const y0 = 463000.00;
-    const dPhi = 0.36 * (lat - phi0);
-    const dLam = 0.36 * (lon - lam0);
-    const Rpq_x = [
-      [0,1, 190094.945],[1,1, -11832.228],[2,1, -114.221],[0,3, -32.391],
-      [1,0, -0.705],[3,1, -2.340],[1,3, -0.608],[0,2, -0.008],[2,3, 0.148]
-    ];
-    const Rpq_y = [
-      [1,0, 309056.544],[0,2, 3638.893],[2,0, 73.077],[1,2, -157.984],
-      [3,0, 59.788],[0,1, 0.433],[2,2, -6.439],[1,1, -0.032],[0,4, 0.092],[1,4, -0.054]
-    ];
-    let dX = 0, dY = 0;
-    for (const [p, q, c] of Rpq_x) dX += c * Math.pow(dPhi, p) * Math.pow(dLam, q);
-    for (const [p, q, c] of Rpq_y) dY += c * Math.pow(dPhi, p) * Math.pow(dLam, q);
-    return { x: x0 + dX, y: y0 + dY };
+  // Toont het GPS-testpaneel alleen voor jezelf (initialen "PD"), nooit voor andere gebruikers.
+  function gpsDebugToegestaan() {
+    return initOphalen().trim().toUpperCase() === 'PD';
   }
 
-  function fotoGemiddeldeGps(fotos) {
-    const metGps = (fotos || []).filter(f => f.gps && f.gps.lat && f.gps.lon);
-    if (!metGps.length) return null;
-    let sumLat = 0, sumLon = 0;
-    for (const f of metGps) {
-      sumLat += parseFloat(f.gps.lat);
-      sumLon += parseFloat(f.gps.lon);
-    }
-    return { lat: sumLat / metGps.length, lon: sumLon / metGps.length };
-  }
-
-  // Verzamelt 5 sec GPS-fixes na een foto, voegt toe aan de lopende pot van de put,
-  // en toetst het resultaat tegen het gemiddelde van de foto-GPS-punten.
   function gpsDebug(tekst, kleur) {
+    if (!gpsDebugToegestaan()) return;
     const el = document.getElementById('gps-debug');
     if (!el) return;
+    el.style.display    = 'block';
     el.style.borderLeft = `4px solid ${kleur}`;
     el.textContent      = tekst;
   }
-  
+
+  // Start het volgen van de locatie zodra een put-detail wordt geopend.
+  // Elke binnenkomende fix vervangt de vorige (_gpsLaatsteFix) — geen gemiddelde,
+  // geen outlier-filter: bij het maken van een foto pak je gewoon de meest recente fix,
+  // omdat die het beste moment representeert (jij staat dan bij de put).
   function gpsStarten() {
-  if (!navigator.geolocation) {
-    gpsDebug('GPS niet beschikbaar', '#c0392b');
-    return;
+    if (!navigator.geolocation) {
+      gpsDebug('GPS niet beschikbaar', '#c0392b');
+      return;
+    }
+    _gpsLaatsteFix = null;
+    gpsStoppen(); // eventuele vorige watch netjes opruimen voor we een nieuwe starten
+
+    gpsDebug('📡 GPS opwarmen…', '#ed6f26');
+
+    _gpsWatchId = navigator.geolocation.watchPosition(
+      pos => {
+        _gpsLaatsteFix = {
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          acc: Math.round(pos.coords.accuracy),
+          ts:  Date.now()
+        };
+        gpsDebug(
+          `📡 GPS ±${_gpsLaatsteFix.acc}m\n${_gpsLaatsteFix.lat.toFixed(6)} ${_gpsLaatsteFix.lon.toFixed(6)}`,
+          _gpsLaatsteFix.acc <= 15 ? '#0f6434' : '#ed6f26'
+        );
+      },
+      () => gpsDebug('❌ GPS fout', '#c0392b'),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
   }
-  _gpsFixes       = [];
-  _gpsAantalFotos = 0;
-  if (_gpsWatchId !== null) navigator.geolocation.clearWatch(_gpsWatchId);
-  if (_gpsStopTimer) { clearTimeout(_gpsStopTimer); _gpsStopTimer = null; }
 
-  const el = document.getElementById('gps-debug');
-  if (el) el.style.display = 'block';
-  gpsDebug('📡 GPS opwarmen…', '#ed6f26');
-  
-  setTimeout(() => {
-  if (_gpsWatchId !== null) {
-    navigator.geolocation.clearWatch(_gpsWatchId);
-    _gpsWatchId = null;
-  }
-  gpsDebug('GPS gestopt (timeout)', '#555555');
-  setTimeout(() => {
-    const el = document.getElementById('gps-debug');
-    if (el) el.style.display = 'none';
-  }, 3000);
-}, 30000); // 30 sec
-
-  _gpsWatchId = navigator.geolocation.watchPosition(
-    pos => {
-      const acc = pos.coords.accuracy;
-      if (acc > 50) return; // ruis weggooien
-      const fix = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        acc: Math.round(acc),
-        ts:  Date.now()
-      };
-      _gpsFixes.push(fix);
-      _gps = gpsBesteFix();
-      gpsDebug(
-        `📡 GPS ±${fix.acc}m · ${_gpsFixes.length} fixes\n` +
-        (_gps ? `${_gps.lat} ${_gps.lon}` : ''),
-        acc <= 15 ? '#0f6434' : '#ed6f26'
-      );
-    },
-    () => gpsDebug('❌ GPS fout', '#c0392b'),
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-  );
-}
-
-function gpsStoppenNa10sec() {
-  if (_gpsStopTimer) clearTimeout(_gpsStopTimer);
-  _gpsStopTimer = setTimeout(() => {
+  // Stopt GPS volledig. Wordt aangeroepen bij het verlaten van put-detail
+  // én meteen nadat de 2e foto van een put is gemaakt (zie camera-input handler).
+  function gpsStoppen() {
     if (_gpsWatchId !== null) {
       navigator.geolocation.clearWatch(_gpsWatchId);
       _gpsWatchId = null;
     }
-	
-	const el2 = document.getElementById('gps-debug');
-    if (el2) el2.style.display = 'block';
-
     gpsDebug('GPS gestopt', '#555555');
-    setTimeout(() => {
-      const el = document.getElementById('gps-debug');
-      if (el) el.style.display = 'none';  // verberg na stoppen (voor productie)
-    }, 3000);
-  }, 10000);
-}
-
-function gpsBesteFix() {
-  if (!_gpsFixes.length) return null;
-
-  // Eerste ronde gemiddelde
-  const gemLat = _gpsFixes.reduce((s, f) => s + f.lat, 0) / _gpsFixes.length;
-  const gemLon = _gpsFixes.reduce((s, f) => s + f.lon, 0) / _gpsFixes.length;
-
-  // Filter uitschieters >30m van het gemiddelde
-  function afstandM(lat1, lon1, lat2, lon2) {
-    const R   = 6371000;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a   = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  }
-
-  const gefilterd = _gpsFixes.filter(f => afstandM(gemLat, gemLon, f.lat, f.lon) <= 30);
-  const bron = gefilterd.length >= 3 ? gefilterd : _gpsFixes; // min 3 fixes voor filtering
-
-  const lat = bron.reduce((s, f) => s + f.lat, 0) / bron.length;
-  const lon = bron.reduce((s, f) => s + f.lon, 0) / bron.length;
-  const acc = Math.round(bron.reduce((s, f) => s + f.acc, 0) / bron.length);
-
-  return {
-    lat: lat.toFixed(6),
-    lon: lon.toFixed(6),
-    acc
-  };
-}
-
-  function putLocatieRD(put) {
-    const gem = fotoGemiddeldeGps(put.fotos);
-    if (!gem) return null;
-    const rd = wgs84NaarRD(gem.lat, gem.lon);
-    return { x: Math.round(rd.x), y: Math.round(rd.y) };
-  }
-
-  function rdLabelHtml(rd) {
-    if (!rd) return '';
-    return `<span class="rd-coord">X: ${rd.x} &nbsp; Y: ${rd.y}</span>`;
   }
 
   // =====================
@@ -1463,12 +1366,7 @@ function putCompleet(put) {
       }
     }
     kompasStappen();
-if (_gpsWatchId !== null) {
-  navigator.geolocation.clearWatch(_gpsWatchId);
-  _gpsWatchId = null;
-}
-if (_gpsStopTimer) { clearTimeout(_gpsStopTimer); _gpsStopTimer = null; }
-gpsDebug('GPS gestopt', '#555555');
+    gpsStoppen();
 
     puttenLijstTekenen();
     toonScherm('s-putten');
@@ -2649,8 +2547,6 @@ function overstortAnnuleren() {
   // FOTO'S
   // =====================
 async function fotoMaken() {
-  _gps = gpsBesteFix(); // gebruik beste gemiddelde fix op dit moment
-
   if (FSA_ONDERSTEUND && !fotoMapHandle) {
     const opgeslagen = await handleOphalenDB();
     if (opgeslagen) {
@@ -2694,8 +2590,9 @@ document.getElementById('camera-input').addEventListener('change', async functio
   const naam    = fotoNaam(put.id, project.init, nr);
 
   try {
+    const gpsBijFoto = _gpsLaatsteFix; // fix van dit moment — niet gemiddeld, niet uit het verleden
     let data = await comprimeerFoto(file);
-    if (_gps) data = gpsNaarExif(data, _gps);
+    if (gpsBijFoto) data = gpsNaarExif(data, gpsBijFoto);
 
     if (FSA_ONDERSTEUND && !fotoMapHandle) {
       toonMelding('Kies éénmalig een map voor foto-opslag…', 4000);
@@ -2710,13 +2607,12 @@ document.getElementById('camera-input').addEventListener('change', async functio
     }
 
     if (!put.fotos) put.fotos = [];
-    put.fotos.push({ naam, data, gps: _gps, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
+    put.fotos.push({ naam, data, gps: gpsBijFoto, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
 
     opslaan();
     fotoGridTekenen();
     toonMelding(`Foto ${nr} opgeslagen ✓`);
-    _gpsAantalFotos++;
-    if (_gpsAantalFotos >= 2) gpsStoppenNa10sec();
+    if (put.fotos.length >= 2) gpsStoppen(); // 2 foto's is genoeg, een 3e is niet standaard
 
   } catch(e) {
     alert('Foto fout: ' + (e && e.message ? e.message : JSON.stringify(e)));
@@ -2784,7 +2680,16 @@ async function fotoVerwijderen(idx) {
   // OPSTARTEN
   // =====================
   laden();
-  
+
+  setTimeout(() => {
+    const missend = [];
+    if (!window.piexif) missend.push('GPS in foto\'s');
+    if (!window.jspdf)  missend.push('PDF-export');
+    if (missend.length) {
+      toonMelding('⚠ Geen internet — niet beschikbaar: ' + missend.join(', ') + '. Gebruik HTML-export.', 6000);
+    }
+  }, 3000);
+
   if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().then(granted => {
     if (!granted) toonMelding('⚠ Opslag niet gegarandeerd — maak regelmatig een backup.');
@@ -2807,8 +2712,481 @@ dbOpenen().then(async () => {
   
   
   // =====================
-  // HTML EXPORT
+  // HTML EN PDF EXPORT
   // =====================
+function putSchetsAfbeeldingenBouwen(putten) {
+  const offscreenCanvasses = {};
+  for (const put of putten) {
+    if (put.aansluitingen && put.aansluitingen.length > 0) {
+      const oc = document.createElement('canvas');
+      oc.width = 800; oc.height = 800;
+      const octx = oc.getContext('2d');
+      const ocStr = 800 * 0.18;
+      const ocLL  = ocStr * 1.2;
+      const ocMid = { x: 400, y: 400 };
+      const lijnKleurOC = (a) => (a.bob || a.diam || a.vorm || a.mat) ? '#111111' : '#c0392b';
+
+      octx.beginPath();
+      octx.arc(ocMid.x, ocMid.y, ocStr, 0, 2 * Math.PI);
+      octx.strokeStyle = '#555555';
+      octx.lineWidth = 5;
+      octx.stroke();
+
+      if (put.type) {
+        octx.fillStyle = '#111111';
+        octx.font = `bold ${Math.round(ocStr * 0.45)}px Arial`;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        if (put.overstort?.aanwezig && put.overstort?.type === 'midden') {
+          const ovRadExp   = (put.overstort.hoek - 90) * Math.PI / 180;
+          const loodRadExp = ovRadExp + Math.PI / 2;
+          const afstExp    = ocStr * 1.75;
+          const y1exp = ocMid.y + Math.sin(loodRadExp) * afstExp;
+          const y2exp = ocMid.y + Math.sin(loodRadExp + Math.PI) * afstExp;
+          const gekozenRadExp = y1exp <= y2exp ? loodRadExp : loodRadExp + Math.PI;
+          octx.fillText(put.type,
+            ocMid.x + Math.cos(gekozenRadExp) * afstExp,
+            ocMid.y + Math.sin(gekozenRadExp) * afstExp
+          );
+        } else {
+          octx.fillText(put.type, ocMid.x, ocMid.y);
+        }
+      }
+
+      // Noord-pijl linksboven
+      (function() {
+        const ax = 48, ay = 90, len = 48;
+        octx.beginPath();
+        octx.moveTo(ax, ay + 10);
+        octx.lineTo(ax, ay - len);
+        octx.strokeStyle = '#ed6f26';
+        octx.lineWidth = 5;
+        octx.stroke();
+        octx.beginPath();
+        octx.moveTo(ax, ay - len);
+        octx.lineTo(ax - 16, ay - len + 26);
+        octx.lineTo(ax + 16, ay - len + 26);
+        octx.closePath();
+        octx.fillStyle = '#ed6f26';
+        octx.fill();
+        octx.fillStyle = '#ed6f26';
+        octx.font = 'bold 36px Arial';
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.fillText('N', ax, ay - len - 20);
+      })();
+
+      put.aansluitingen.forEach((a, i) => {
+        const rad = (a.hoek - 90) * Math.PI / 180;
+        const ll  = ocStr * 1.2;
+        const x1 = ocMid.x + Math.cos(rad) * ocStr;
+        const y1 = ocMid.y + Math.sin(rad) * ocStr;
+        const x2 = ocMid.x + Math.cos(rad) * (ocStr + ll);
+        const y2 = ocMid.y + Math.sin(rad) * (ocStr + ll);
+        octx.beginPath();
+        octx.moveTo(x1, y1);
+        octx.lineTo(x2, y2);
+        octx.strokeStyle = lijnKleurOC(a);
+        octx.lineWidth = lijnDikte(a.diam);
+        octx.stroke();
+        const lx = ocMid.x + Math.cos(rad) * (ocStr + ll + 18);
+        const ly = ocMid.y + Math.sin(rad) * (ocStr + ll + 18);
+        octx.fillStyle = lijnKleurOC(a);
+        octx.font = `bold ${Math.round(ocStr * 0.38)}px Arial`;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.fillText(i + 1, lx, ly);
+        if (a.diam) {
+          const ix = ocMid.x + Math.cos(rad) * (ocStr + ll * 0.5) + Math.cos(rad + Math.PI/2) * 58;
+          const iy = ocMid.y + Math.sin(rad) * (ocStr + ll * 0.5) + Math.sin(rad + Math.PI/2) * 58;
+          octx.fillStyle = '#555555';
+          octx.font = `${Math.round(ocStr * 0.28)}px Arial`;
+          octx.textAlign = 'center';
+          octx.textBaseline = 'middle';
+          octx.fillText(`⌀${a.diam}`, ix, iy);
+        }
+
+        if (a.koppelput) {
+          const numAfstand   = ocStr + ocLL + 18;
+          const loodRad      = rad + Math.PI / 2;
+          const koppelOffset = 90;
+          const kx = ocMid.x + Math.cos(rad) * numAfstand + Math.cos(loodRad) * -koppelOffset;
+          const ky = ocMid.y + Math.sin(rad) * numAfstand + Math.sin(loodRad) * -koppelOffset;
+          const tekst = `→ ${a.koppelput}`;
+          const fontSize = Math.round(ocStr * 0.26);
+          octx.font = `bold ${fontSize}px Arial`;
+          const tw = octx.measureText(tekst).width;
+          const pad = 8;
+          octx.fillStyle = '#e8f4ec';
+          octx.fillRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+          octx.strokeStyle = '#0a4d27';
+          octx.lineWidth = 1.5;
+          octx.strokeRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
+          octx.fillStyle = '#0a4d27';
+          octx.textAlign = 'center';
+          octx.textBaseline = 'middle';
+          octx.fillText(tekst, kx, ky);
+        }
+
+        if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
+          const pijlAfstand = ocStr + ll * 0.5;
+          const px = ocMid.x + Math.cos(rad) * pijlAfstand + Math.cos(rad - Math.PI/2) * 24;
+          const py = ocMid.y + Math.sin(rad) * pijlAfstand + Math.sin(rad - Math.PI/2) * 24;
+          const pijlRad  = a.stroom === 'naar-deze' ? rad + Math.PI : rad;
+          const pijlSize = ocStr * 0.22;
+
+          octx.save();
+          octx.translate(px, py);
+          octx.rotate(pijlRad);
+          octx.beginPath();
+          octx.moveTo(pijlSize, 0);
+          octx.lineTo(-pijlSize, pijlSize * 0.5);
+          octx.lineTo(-pijlSize, -pijlSize * 0.5);
+          octx.closePath();
+          octx.fillStyle = '#1a6fc4';
+          octx.fill();
+          octx.restore();
+        }
+      });
+      if (put.overstort?.aanwezig) {
+        tekenOverstortOpCanvas(octx, put, ocMid, ocStr, ocLL, false, true);
+      }
+      offscreenCanvasses[put.id] = oc.toDataURL('image/png');
+    }
+  }
+  return offscreenCanvasses;
+}
+
+function putSamenvattingBerekenen(putten) {
+  const totaal       = putten.length;
+  const compleetLijst = putten.filter(p => putCompleet(p));
+  const onvolledigLijst = putten.filter(p => !putCompleet(p));
+  const metOverstortLijst = putten.filter(p => p.overstort?.aanwezig);
+  const metOverstort = metOverstortLijst.length;
+  const metOverstortNamen = metOverstortLijst.map(p => p.id).join(', ');
+  const nietToegankelijkLijst = putten.filter(p =>
+    p.putAlgemeen === 'Niet te openen, zit vast' ||
+    p.putAlgemeen === 'Niet te vinden, onder maaiveld');
+  const nietToegankelijk = nietToegankelijkLijst.length;
+  const nietToegankelijkNamen = nietToegankelijkLijst.map(p => p.id).join(', ');
+  const aantalFotos  = putten.reduce((s, p) => s + (p.fotos||[]).length, 0);
+
+  const onvolledigNamen = onvolledigLijst
+    .filter(p => p.putAlgemeen !== 'Niet te openen, zit vast' && p.putAlgemeen !== 'Niet te vinden, onder maaiveld')
+    .map(p => p.id).join(', ');
+
+  return { totaal, compleetLijst, onvolledigLijst, metOverstort, metOverstortNamen,
+           nietToegankelijk, nietToegankelijkNamen, aantalFotos, onvolledigNamen };
+}
+
+  // Stukje PDF Export
+async function exporteerRapportPDF() {
+  const project = app.projecten[app.actiefIdx];
+  if (!project) return;
+
+  if (!window.jspdf) {
+    toonMelding('⚠ PDF-library niet geladen (geen internet?). Gebruik HTML-export.', 6000);
+    return;
+  }
+
+  const incompleetLijst = project.putten.filter(p => !putCompleet(p));
+  if (incompleetLijst.length > 0) {
+    const namen = incompleetLijst.map(p => p.id).join(', ');
+    const doorgaan = confirm(
+      `${incompleetLijst.length} put(ten) zijn nog niet compleet:\n${namen}\n\nToch doorgaan met het rapport?`
+    );
+    if (!doorgaan) return;
+  }
+
+  toonMelding('PDF wordt opgebouwd…', 8000);
+  try {
+    const offscreenCanvasses = putSchetsAfbeeldingenBouwen(project.putten);
+    const sam = putSamenvattingBerekenen(project.putten);
+
+    // Kleuren overgenomen uit de HTML-export, zodat de PDF er hetzelfde uitziet
+    const GROEN = [15, 100, 52];          // #0f6434
+    const GROEN_LICHT = [232, 244, 236];  // #e8f4ec
+    const GROEN_TEKST = [10, 77, 39];     // #0a4d27
+    const ORANJE = [237, 111, 38];        // #ed6f26
+    const ROOD = [192, 57, 43];           // #c0392b
+    const GRIJS_KADER = [204, 204, 204];  // #ccc
+    const GRIJS_TEKST = [85, 85, 85];     // #555
+    const BLAUW_LICHT = [220, 233, 245];  // #dce9f5
+    const BLAUW_TEKST = [24, 95, 165];    // #185FA5
+
+    // Tekent een klein icoontje i.p.v. een emoji — emoji's renderen niet in jsPDF's lettertype
+    function tekenIcoon(doc, type, x, y, kleur) {
+      const r = 1.8;
+      if (type === 'check') {
+        doc.setFillColor(...kleur); doc.circle(x, y, r, 'F');
+        doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.45);
+        doc.line(x - 1.0, y, x - 0.2, y + 0.8); doc.line(x - 0.2, y + 0.8, x + 1.1, y - 0.9);
+      } else if (type === 'ring') {
+        doc.setDrawColor(...kleur); doc.setLineWidth(0.5); doc.circle(x, y, r, 'S');
+      } else if (type === 'dot') {
+        doc.setFillColor(...kleur); doc.circle(x, y, r, 'F');
+      } else if (type === 'driehoek') {
+        doc.setFillColor(...kleur); doc.triangle(x, y - r * 1.1, x - r, y + r * 0.8, x + r, y + r * 0.8, 'F');
+      } else if (type === 'vierkant') {
+        doc.setDrawColor(...kleur); doc.setLineWidth(0.4); doc.rect(x - r * 0.9, y - r * 0.7, r * 1.8, r * 1.4, 'S');
+      }
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageW   = doc.internal.pageSize.getWidth();
+    const pageH   = doc.internal.pageSize.getHeight();
+    const marge   = 12;
+	// formaat van de put schets in de pdf export
+    const schetsBreedte = 55;
+    const gap     = 5;
+
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...GROEN);
+    doc.text(project.naam, marge, 16);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    // ===== Samenvatting: kader met 2 kolommen naast elkaar, zoals in de HTML =====
+    const samY = 22;
+    const samBoxW = pageW - marge * 2;
+    const kolomBreedte = samBoxW / 2 - 4;
+    const regelHoogte = 5.3;
+    const samBoxH = 4 * regelHoogte + 8;
+
+    doc.setDrawColor(...GRIJS_KADER);
+    doc.setFillColor(249, 249, 249);
+    doc.roundedRect(marge, samY, samBoxW, samBoxH, 2, 2, 'FD');
+
+    let ly = samY + 6.5;
+    doc.setFontSize(9);
+    const datumExport = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const linksRijen = [
+      ['Medewerker', project.init],
+      ['Aanmaakdatum', project.datum.split('-').reverse().join('-')],
+      ['Export datum', datumExport],
+      ['Aantal putten', String(sam.totaal)]
+    ];
+    for (const [label, val] of linksRijen) {
+      doc.setTextColor(...GRIJS_TEKST);
+      doc.text(label, marge + 4, ly);
+      doc.setTextColor(0, 0, 0);
+	  // Afstand tussen label en waarde (linker kolom)
+      doc.text(val, marge + 4 + 26, ly);
+      ly += regelHoogte;
+    }
+
+    let ry = samY + 6.5;
+	// Afstand tussen waarde (linker kolom) en icoon (rechter kolom)
+    const rechtsX  = marge + 64;
+    const labelX   = rechtsX + 6;
+    const waardeX  = rechtsX + 32;
+    function rechtsRegel(icoon, kleur, label, waarde, waardeKleur) {
+      tekenIcoon(doc, icoon, rechtsX, ry - 1, kleur);
+      doc.setTextColor(...(waardeKleur || [0, 0, 0]));
+      doc.text(label, labelX, ry);
+      doc.setFont(undefined, 'bold');
+      doc.text(waarde, waardeX, ry, { maxWidth: pageW - marge - waardeX - 2 });
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(0, 0, 0);
+      ry += regelHoogte;
+    }
+    rechtsRegel('check', GROEN, 'Compleet', `${sam.compleetLijst.length} van ${sam.totaal}`, GROEN);
+    rechtsRegel('ring', ORANJE, 'Onvolledig', `${sam.onvolledigLijst.length}` + (sam.onvolledigNamen ? `  =>  namelijk put ${sam.onvolledigNamen}` : ''), ORANJE);
+    rechtsRegel('dot', BLAUW_TEKST, 'Overstort', `${sam.metOverstort}` + (sam.metOverstortNamen ? `  =>  namelijk put ${sam.metOverstortNamen}` : ''));
+    rechtsRegel('driehoek', ROOD, 'Niet toegankelijk', `${sam.nietToegankelijk}` + (sam.nietToegankelijkNamen ? `  =>  namelijk put ${sam.nietToegankelijkNamen}` : ''), ROOD);
+    rechtsRegel('vierkant', GRIJS_TEKST, "Foto's", `${sam.aantalFotos}`);
+
+    let y = samY + samBoxH + 8;
+
+    // ===== Putten: elk in een eigen kader, schets links / tabel rechts =====
+    for (const put of project.putten) {
+      const algTekst   = put.putAlgemeen || '';
+      const heeftAansl = put.aansluitingen && put.aansluitingen.length > 0;
+      const aantalRijen = heeftAansl ? put.aansluitingen.length : 0;
+      const aantalOpmRijen = heeftAansl ? put.aansluitingen.filter(a => a.opmerking).length : 0;
+      const ovExtra    = put.overstort?.aanwezig ? 20 : 0;
+      const geschatteTabelHoogte = heeftAansl ? (8 + aantalRijen * 6 + aantalOpmRijen * 5 + ovExtra) : 8;
+      const blokInhoudHoogte = Math.max(heeftAansl ? schetsBreedte : 0, geschatteTabelHoogte);
+      const blokHoogte = blokInhoudHoogte + 24; // +24: ruimte voor kop, alg-regel en foto-regel
+
+      if (y + blokHoogte > pageH - marge) {
+        doc.addPage();
+        y = marge;
+      }
+
+      const kaderStartY = y;
+      const tabelX = marge + 4 + schetsBreedte + gap;
+      const tabelBreedte = pageW - marge - tabelX - 4;
+
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...GROEN);
+      doc.text(`PUT ${put.id}`, marge + 4, y + 7);
+      doc.setFont(undefined, 'normal');
+      const tagStartX = marge + 4 + doc.getTextWidth(`PUT ${put.id}`);
+      if (put.type) {
+        doc.setFontSize(9);
+        const tw = doc.getTextWidth(put.type);
+        doc.setFillColor(...GROEN_LICHT);
+        doc.roundedRect(tagStartX + 3, y + 7 - 3.2, tw + 4, 4.6, 1, 1, 'F');
+        doc.setTextColor(...GROEN_TEKST);
+        doc.text(put.type, tagStartX + 5, y + 7);
+      }
+      doc.setTextColor(0, 0, 0);
+      doc.setDrawColor(224, 224, 224);
+      doc.setLineWidth(0.3);
+      doc.line(marge + 4, y + 9.5, pageW - marge - 4, y + 9.5);
+
+      let inhoudY = y + 14;
+
+      if (algTekst) {
+        doc.setFontSize(9);
+        if (algTekst === 'Niet te openen, zit vast' || algTekst === 'Niet te vinden, onder maaiveld') {
+          doc.setTextColor(...ROOD);
+          doc.text(`\u2022 ${algTekst}`, marge + 4, inhoudY, { maxWidth: pageW - marge * 2 - 8 });
+        } else {
+          doc.setTextColor(0, 0, 0);
+          doc.text(`\u2022 Opmerking: ${algTekst}`, marge + 4, inhoudY, { maxWidth: pageW - marge * 2 - 8 });
+        }
+        doc.setTextColor(0, 0, 0);
+        inhoudY += 5;
+      }
+
+      // Foto-bestandsnamen, net als de "Foto's: ..." regel in het HTML-rapport
+      const fotoNamen = (put.fotos || []).map(f => f.naam).join(', ');
+      doc.setFontSize(8);
+      doc.setTextColor(...GRIJS_TEKST);
+      doc.text(`Foto's:  ${fotoNamen || 'Geen foto\u2019s'}`, marge + 4, inhoudY, { maxWidth: pageW - marge * 2 - 8 });
+      doc.setTextColor(0, 0, 0);
+      inhoudY += 5;
+
+      const blokStartY = inhoudY;
+
+      if (heeftAansl) {
+        const schetsImg = offscreenCanvasses[put.id];
+        if (schetsImg) doc.addImage(schetsImg, 'PNG', marge + 4, inhoudY, schetsBreedte, schetsBreedte);
+
+        const head = [['#', 'BOB', 'BBB', 'Diam.', 'Vorm', 'Mat.', 'Van/naar put']];
+        const body = [];
+        put.aansluitingen.forEach((a, i) => {
+          body.push([
+            i + 1,
+            a.bob ? a.bob + ' cm' : '-',
+            a.bbb ? a.bbb + ' cm' : '-',
+            a.diam ? a.diam + ' mm' : '-',
+            a.vorm || '-',
+            a.mat || '-',
+            a.koppelput || '-'
+          ]);
+          // Opmerking direct na de bijbehorende aansluiting-rij, net als in het HTML-rapport
+          if (a.opmerking) {
+            body.push([{
+              content: a.opmerking, colSpan: 7,
+              styles: { fontStyle: 'italic', textColor: GRIJS_TEKST, fillColor: [255, 255, 255] }
+            }]);
+          }
+        });
+
+        doc.autoTable({
+          head, body,
+          startY: blokStartY,
+          margin: { left: tabelX, right: marge + 4 },
+          tableWidth: tabelBreedte,
+          styles: { fontSize: 7.5, cellPadding: 1.2, lineColor: [230, 230, 230], lineWidth: 0.2 },
+          headStyles: { fillColor: GROEN_LICHT, textColor: GROEN_TEKST, fontSize: 7.5 },
+          alternateRowStyles: { fillColor: [250, 250, 250] },
+          theme: 'grid'
+        });
+
+        let curY = doc.lastAutoTable.finalY;
+
+        if (put.overstort?.aanwezig) {
+          const ov = put.overstort;
+          const ovBody = [
+            ['Drempelhoogte', ov.drempelhoogte ? ov.drempelhoogte + ' cm' : '-'],
+            ['Drempelbreedte', ov.drempelbreedte ? ov.drempelbreedte + ' cm' : '-'],
+            ['Materiaal', ov.materiaal || '-']
+          ];
+          if (ov.koppelput) ovBody.push(['Gekoppeld aan put', ov.koppelput]);
+          if (ov.opmerking) ovBody.push([{ content: 'Opmerking', styles: { fontStyle: 'italic' } }, { content: ov.opmerking, styles: { fontStyle: 'italic' } }]);
+
+          doc.autoTable({
+            head: [['Overstort', '']],
+            body: ovBody,
+            startY: curY + 1,
+            margin: { left: tabelX, right: marge + 4 },
+            tableWidth: tabelBreedte,
+            columnStyles: { 0: { cellWidth: 38 } },
+            styles: { fontSize: 7.5, cellPadding: 1.2 },
+            headStyles: { fillColor: BLAUW_LICHT, textColor: BLAUW_TEKST },
+            theme: 'grid'
+          });
+          curY = doc.lastAutoTable.finalY;
+        }
+
+        inhoudY = Math.max(curY, blokStartY + schetsBreedte);
+      } else {
+        doc.setFontSize(9);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Geen aansluitingen ingevuld', marge + 4, inhoudY + 4);
+        doc.setTextColor(0, 0, 0);
+        inhoudY += 8;
+      }
+
+      const kaderEindY = inhoudY + 4;
+      doc.setDrawColor(...GRIJS_KADER);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(marge, kaderStartY, pageW - marge * 2, kaderEindY - kaderStartY, 2, 2, 'S');
+
+      y = kaderEindY + 6;
+    }
+
+    const pdfBlob = doc.output('blob');
+    const bestandsnaam = `Putten_${project.naam.replace(/\s+/g, '_').replace(/\//g, '-')}_${project.init}.pdf`;
+    const file = new File([pdfBlob], bestandsnaam, { type: 'application/pdf' });
+    const url = URL.createObjectURL(pdfBlob);
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: project.naam });
+        toonMelding('PDF gedeeld ✓');
+        project.verzonden = (project.verzonden || 0) + 1;
+        opslaan();
+        URL.revokeObjectURL(url);
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          URL.revokeObjectURL(url);
+          toonMelding('Delen geannuleerd.');
+          return;
+        }
+        // Share mislukt — val door naar download
+      }
+    }
+
+    try {
+      const a = document.createElement('a');
+      a.href     = url;
+      a.download = bestandsnaam;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toonMelding('PDF wordt gedownload ✓');
+      project.verzonden = (project.verzonden || 0) + 1;
+      opslaan();
+    } catch (e) {
+      toonMelding('Download mislukt: ' + (e.message || e));
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+  } catch (err) {
+    toonMelding('Fout bij opbouwen PDF: ' + (err.message || err));
+    console.error('exporteerRapportPDF fout:', err);
+  }
+}
+
 async function exporteerRapport() {
     const project = app.projecten[app.actiefIdx];
     if (!project) return;
@@ -2833,166 +3211,13 @@ async function exporteerRapport() {
     toonMelding('Rapport wordt opgebouwd…', 8000);
 	try {
 
-    const offscreenCanvasses = {};
-    for (const put of project.putten) {
-      if (put.aansluitingen && put.aansluitingen.length > 0) {
-        const oc = document.createElement('canvas');
-        oc.width = 800; oc.height = 800;
-        const octx = oc.getContext('2d');
-        const ocStr = 800 * 0.18;
-		const ocLL  = ocStr * 1.2;
-        const ocMid = { x: 400, y: 400 };
-        const lijnKleurOC = (a) => (a.bob || a.diam || a.vorm || a.mat) ? '#111111' : '#c0392b';
-
-        octx.beginPath();
-        octx.arc(ocMid.x, ocMid.y, ocStr, 0, 2 * Math.PI);
-        octx.strokeStyle = '#555555';
-        octx.lineWidth = 5;
-        octx.stroke();
-
-        if (put.type) {
-          octx.fillStyle = '#111111';
-          octx.font = `bold ${Math.round(ocStr * 0.45)}px Arial`;
-          octx.textAlign = 'center';
-          octx.textBaseline = 'middle';
-          if (put.overstort?.aanwezig && put.overstort?.type === 'midden') {
-            const ovRadExp   = (put.overstort.hoek - 90) * Math.PI / 180;
-            const loodRadExp = ovRadExp + Math.PI / 2;
-            const afstExp    = ocStr * 1.75;
-            const y1exp = ocMid.y + Math.sin(loodRadExp) * afstExp;
-            const y2exp = ocMid.y + Math.sin(loodRadExp + Math.PI) * afstExp;
-            const gekozenRadExp = y1exp <= y2exp ? loodRadExp : loodRadExp + Math.PI;
-            octx.fillText(put.type,
-              ocMid.x + Math.cos(gekozenRadExp) * afstExp,
-              ocMid.y + Math.sin(gekozenRadExp) * afstExp
-            );
-          } else {
-            octx.fillText(put.type, ocMid.x, ocMid.y);
-          }
-        }
-
-// Noord-pijl linksboven
-(function() {
-  const ax = 48, ay = 90, len = 48;
-  octx.beginPath();
-  octx.moveTo(ax, ay + 10);
-  octx.lineTo(ax, ay - len);
-  octx.strokeStyle = '#ed6f26';
-  octx.lineWidth = 5;
-  octx.stroke();
-  octx.beginPath();
-  octx.moveTo(ax, ay - len);
-  octx.lineTo(ax - 16, ay - len + 26);
-  octx.lineTo(ax + 16, ay - len + 26);
-  octx.closePath();
-  octx.fillStyle = '#ed6f26';
-  octx.fill();
-  octx.fillStyle = '#ed6f26';
-  octx.font = 'bold 36px Arial';
-  octx.textAlign = 'center';
-  octx.textBaseline = 'middle';
-  octx.fillText('N', ax, ay - len - 20);
-})();
-
-        put.aansluitingen.forEach((a, i) => {
-          const rad = (a.hoek - 90) * Math.PI / 180;
-          const ll  = ocStr * 1.2;
-          const x1 = ocMid.x + Math.cos(rad) * ocStr;
-          const y1 = ocMid.y + Math.sin(rad) * ocStr;
-          const x2 = ocMid.x + Math.cos(rad) * (ocStr + ll);
-          const y2 = ocMid.y + Math.sin(rad) * (ocStr + ll);
-          octx.beginPath();
-          octx.moveTo(x1, y1);
-          octx.lineTo(x2, y2);
-          octx.strokeStyle = lijnKleurOC(a);
-          octx.lineWidth = lijnDikte(a.diam);
-          octx.stroke();
-          const lx = ocMid.x + Math.cos(rad) * (ocStr + ll + 18);
-          const ly = ocMid.y + Math.sin(rad) * (ocStr + ll + 18);
-          octx.fillStyle = lijnKleurOC(a);
-          octx.font = `bold ${Math.round(ocStr * 0.38)}px Arial`;
-          octx.textAlign = 'center';
-          octx.textBaseline = 'middle';
-          octx.fillText(i + 1, lx, ly);
-          if (a.diam) {
-            const ix = ocMid.x + Math.cos(rad) * (ocStr + ll * 0.5) + Math.cos(rad + Math.PI/2) * 58;
-            const iy = ocMid.y + Math.sin(rad) * (ocStr + ll * 0.5) + Math.sin(rad + Math.PI/2) * 58;
-            octx.fillStyle = '#555555';
-            octx.font = `${Math.round(ocStr * 0.28)}px Arial`;
-            octx.textAlign = 'center';
-            octx.textBaseline = 'middle';
-            octx.fillText(`⌀${a.diam}`, ix, iy);
-          }
-		  
-		  if (a.koppelput) {
-            const numAfstand   = ocStr + ocLL + 18;
-            const loodRad      = rad + Math.PI / 2;
-            const koppelOffset = 90;
-            const kx = ocMid.x + Math.cos(rad) * numAfstand + Math.cos(loodRad) * -koppelOffset;
-            const ky = ocMid.y + Math.sin(rad) * numAfstand + Math.sin(loodRad) * -koppelOffset;
-            const tekst = `→ ${a.koppelput}`;
-            const fontSize = Math.round(ocStr * 0.26);
-            octx.font = `bold ${fontSize}px Arial`;
-            const tw = octx.measureText(tekst).width;
-            const pad = 8;
-            octx.fillStyle = '#e8f4ec';
-            octx.fillRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
-            octx.strokeStyle = '#0a4d27';
-            octx.lineWidth = 1.5;
-            octx.strokeRect(kx - tw/2 - pad, ky - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
-            octx.fillStyle = '#0a4d27';
-            octx.textAlign = 'center';
-            octx.textBaseline = 'middle';
-            octx.fillText(tekst, kx, ky);
-          }
-		  
-
-          if (a.stroom === 'naar-deze' || a.stroom === 'naar-volgende') {
-            const pijlAfstand = ocStr + ll * 0.5;
-            const px = ocMid.x + Math.cos(rad) * pijlAfstand + Math.cos(rad - Math.PI/2) * 24;
-            const py = ocMid.y + Math.sin(rad) * pijlAfstand + Math.sin(rad - Math.PI/2) * 24;
-            const pijlRad  = a.stroom === 'naar-deze' ? rad + Math.PI : rad;
-            const pijlSize = ocStr * 0.22;
-
-            octx.save();
-            octx.translate(px, py);
-            octx.rotate(pijlRad);
-            octx.beginPath();
-            octx.moveTo(pijlSize, 0);
-            octx.lineTo(-pijlSize, pijlSize * 0.5);
-            octx.lineTo(-pijlSize, -pijlSize * 0.5);
-            octx.closePath();
-            octx.fillStyle = '#1a6fc4';
-            octx.fill();
-            octx.restore();
-          }
-        });
-        if (put.overstort?.aanwezig) {
-          tekenOverstortOpCanvas(octx, put, ocMid, ocStr, ocLL, false, true);
-        }
-        offscreenCanvasses[put.id] = oc.toDataURL('image/png');
-      }
-    }
+    const offscreenCanvasses = putSchetsAfbeeldingenBouwen(project.putten);
 
 
     const datum = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    // Samenvatting berekenen
-const totaal       = project.putten.length;
-const compleetLijst = project.putten.filter(p => putCompleet(p));
-const onvolledigLijst = project.putten.filter(p => !putCompleet(p));
-const metOverstortLijst = project.putten.filter(p => p.overstort?.aanwezig);
-const metOverstort = metOverstortLijst.length;
-const metOverstortNamen = metOverstortLijst.map(p => p.id).join(', ');
-const nietToegankelijkLijst = project.putten.filter(p =>
-  p.putAlgemeen === 'Niet te openen, zit vast' ||
-  p.putAlgemeen === 'Niet te vinden, onder maaiveld');
-const nietToegankelijk = nietToegankelijkLijst.length;
-const nietToegankelijkNamen = nietToegankelijkLijst.map(p => p.id).join(', ');
-const aantalFotos  = project.putten.reduce((s, p) => s + (p.fotos||[]).length, 0);
-
-const onvolledigNamen = onvolledigLijst
-  .filter(p => p.putAlgemeen !== 'Niet te openen, zit vast' && p.putAlgemeen !== 'Niet te vinden, onder maaiveld')
-  .map(p => p.id).join(', ');
+    const sam = putSamenvattingBerekenen(project.putten);
+    const { totaal, compleetLijst, onvolledigLijst, metOverstort, metOverstortNamen,
+            nietToegankelijk, nietToegankelijkNamen, aantalFotos, onvolledigNamen } = sam;
 
 const samenvattingHTML = `
 <div class="samenvatting">
