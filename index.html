@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.31</title>
+  <title>Putten Inmeten v2.31.1</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -313,6 +313,15 @@
       gap: 8px;
     }
 
+    /* Labels in deze rij verschillen in lengte (1 vs 2 regels) — onderaan
+       uitlijnen met een vaste minimumhoogte zodat de inputs eronder
+       allemaal op dezelfde hoogte beginnen. */
+    .invoer-rij-3 label {
+      min-height: 2.3em;
+      display: flex;
+      align-items: flex-end;
+    }
+
     .diam-voorstel {
       background: var(--accent-licht);
       color: var(--accent-tekst);
@@ -538,7 +547,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.31 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.31.1 · Patrick Duteweerd · 2026
   </div>
 </div>
 
