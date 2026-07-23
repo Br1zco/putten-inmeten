@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.3</title>
+  <title>Putten Inmeten v2.31</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -307,6 +307,12 @@
       gap: 8px;
     }
 
+    .invoer-rij-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
     .diam-voorstel {
       background: var(--accent-licht);
       color: var(--accent-tekst);
@@ -532,7 +538,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.3 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.31 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -637,7 +643,7 @@
   <!-- TYPE + AANSLUITINGEN -->
   <div class="card" id="card-type-aansluiting">
     <h2>Type put &amp; aansluitingen</h2>
-    <div class="invoer-rij">
+    <div class="invoer-rij-3">
       <div>
         <label>Type put</label>
         <select id="m-type" onchange="typePutGewijzigd()">
@@ -652,6 +658,11 @@
       <div>
         <label>Aantal aansluitingen</label>
         <input type="number" id="t-aantal" min="1" max="12" placeholder="bijv. 3">
+      </div>
+      <div>
+        <label>Put diepte (cm) <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></label>
+        <input type="number" id="t-diepte" placeholder="bijv. 320" inputmode="decimal" oninput="putDiepteGewijzigd()">
+        <div class="diam-voorstel" id="t-diepte-hint" style="display:none;"></div>
       </div>
     </div>
 	<button class="btn btn-primair" onclick="tekenPut()" style="margin-top:10px;">Tekenen / bijwerken</button>
@@ -1251,7 +1262,7 @@ function scrollNaarOpslaan() {
     const id = invoer || String(++app.globalTeller);
     const project = app.projecten[app.actiefIdx];
     if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
-	project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '', overstort: null });
+	project.putten.push({ id, fotos: [], aansluitingen: [], putAlgemeen: '', overstort: null });
     opslaan();
     document.getElementById('nieuwe-put-id').value = '';
     puttenLijstTekenen();
@@ -1307,6 +1318,8 @@ function putCompleet(put) {
     document.getElementById('d-put-id').textContent      = `PUT ${put.id}`;
     document.getElementById('d-put-project').textContent = project.naam;
     document.getElementById('m-type').value              = put.type || '';
+    document.getElementById('t-diepte').value             = put.diepte || '';
+    putDiepteControleren();
 
     // Put algemeen herstellen
     const status = put.putAlgemeen || '';
@@ -1450,6 +1463,44 @@ function putStatusGewijzigd() {
     opslaan();
     putCanvasBijwerken();
 	toonMelding(`Type opgeslagen ✓`);
+  }
+
+  // Diepste (grootste) BOB van alle aansluitingen van een put, of null als er geen is.
+  // BOB's kunnen op elk moment worden ingevuld/gewijzigd (ook na de put diepte),
+  // dus deze functie wordt zowel bij het invullen van de diepte als bij het opslaan
+  // van een aansluiting opnieuw aangeroepen.
+  function maxBob(put) {
+    const bobs = (put.aansluitingen || [])
+      .map(a => parseFloat(a.bob))
+      .filter(v => !isNaN(v));
+    return bobs.length ? Math.max(...bobs) : null;
+  }
+
+  function putDiepteGewijzigd() {
+    if (actiefPutIdx === null || app.actiefIdx === null) return;
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    put.diepte = document.getElementById('t-diepte').value;
+    opslaan();
+    putDiepteControleren();
+  }
+
+  function putDiepteControleren() {
+    const hint = document.getElementById('t-diepte-hint');
+    if (!hint || actiefPutIdx === null || app.actiefIdx === null) return;
+    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+    hint.style.display = 'none';
+    hint.textContent   = '';
+
+    const diepte = parseFloat(put.diepte);
+    if (isNaN(diepte)) return; // niet ingevuld — niks te controleren
+
+    const bob = maxBob(put);
+    if (bob !== null && diepte < bob) {
+      hint.style.background = 'var(--gevaar)';
+      hint.style.color      = '#ffffff';
+      hint.style.display    = 'block';
+      hint.textContent      = `⚠ Putdiepte (${diepte} cm) is ondieper dan de diepste BOB (${bob} cm) — controleer.`;
+    }
   }
 
   // =====================
@@ -2232,6 +2283,7 @@ function aansluitingOpslaan() {
       koppelput: (() => { const v = document.getElementById('a-koppelput').value; return v === '__nieuw' ? '' : v; })()
     };
     opslaan();
+    putDiepteControleren();
     document.getElementById('card-aansluiting').style.display = 'none';
     putCanvasTekenen();
     setTimeout(() => {
@@ -2266,7 +2318,7 @@ function aansluitingKoppelputSelectLaden(huidig) {
     const project = app.projecten[app.actiefIdx];
     if (!id) { alert('Vul een put ID in.'); return; }
     if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
-    project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '', overstort: null });
+    project.putten.push({ id, fotos: [], aansluitingen: [], putAlgemeen: '', overstort: null });
     opslaan();
     aansluitingKoppelputSelectLaden(id);
     document.getElementById('a-koppelput').value = id;
@@ -2489,7 +2541,7 @@ function overstortNieuwePutAanmaken() {
   const project = app.projecten[app.actiefIdx];
   if (!id) { alert('Vul een put ID in.'); return; }
   if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
-  project.putten.push({ id, fotos: [], waarden: {}, aansluitingen: [], putAlgemeen: '', overstort: null });
+  project.putten.push({ id, fotos: [], aansluitingen: [], putAlgemeen: '', overstort: null });
   opslaan();
   overstortKoppelputSelectLaden();
   document.getElementById('ov-koppelput').value = id;
@@ -3009,7 +3061,7 @@ async function exporteerRapportPDF() {
       const ovExtra    = put.overstort?.aanwezig ? 20 : 0;
       const geschatteTabelHoogte = heeftAansl ? (8 + aantalRijen * 6 + aantalOpmRijen * 5 + ovExtra) : 8;
       const blokInhoudHoogte = Math.max(heeftAansl ? schetsBreedte : 0, geschatteTabelHoogte);
-      const blokHoogte = blokInhoudHoogte + 24; // +24: ruimte voor kop, alg-regel en foto-regel
+      const blokHoogte = blokInhoudHoogte + 29; // +29: ruimte voor kop, alg-regel, foto-regel en diepte-regel
 
       if (y + blokHoogte > pageH - marge) {
         doc.addPage();
@@ -3059,6 +3111,15 @@ async function exporteerRapportPDF() {
       doc.setFontSize(8);
       doc.setTextColor(...GRIJS_TEKST);
       doc.text(`Foto's:  ${fotoNamen || 'Geen foto\u2019s'}`, marge + 4, inhoudY, { maxWidth: pageW - marge * 2 - 8 });
+      doc.setTextColor(0, 0, 0);
+      inhoudY += 5;
+
+      // Putdiepte — met zelfde waarschuwing als in de HTML-export
+      const maxBobPdf     = maxBob(put);
+      const dieptWaarschPdf = put.diepte && maxBobPdf !== null && parseFloat(put.diepte) < maxBobPdf;
+      doc.setFontSize(8);
+      doc.setTextColor(...(dieptWaarschPdf ? ROOD : GRIJS_TEKST));
+      doc.text(`Putdiepte:  ${put.diepte ? put.diepte + ' cm' : '—'}${dieptWaarschPdf ? '  LET OP: ondieper dan diepste BOB' : ''}`, marge + 4, inhoudY, { maxWidth: pageW - marge * 2 - 8 });
       doc.setTextColor(0, 0, 0);
       inhoudY += 5;
 
@@ -3255,6 +3316,10 @@ for (const put of project.putten) {
         const fotoNamen = (put.fotos || []).map(f => f.naam).join(', ') || '—';
         const heeftFotos = (put.fotos || []).length > 0;
 
+        const maxBobExport   = maxBob(put);
+        const dieptWaarsch   = put.diepte && maxBobExport !== null && parseFloat(put.diepte) < maxBobExport;
+        const diepteRegelHTML = `<div class="foto-regel${dieptWaarsch ? ' rood' : ''}">Putdiepte: &nbsp; ${put.diepte ? htmlEsc(put.diepte) + ' cm' : '—'}${dieptWaarsch ? ' ⚠ ondieper dan diepste BOB' : ''}</div>`;
+
         let aanslHTML = '';
         if (put.aansluitingen && put.aansluitingen.length > 0) {
           aanslHTML += `<div class="cirkel-tabel-rij">`;
@@ -3306,6 +3371,7 @@ aanslHTML += `</div></div>`;
           <div class="put-kop"><span>PUT ${htmlEsc(put.id)}${put.type ? ` <span class="type-tag">${put.type}</span>` : ''}</span></div>
           ${algHTML}
 		  <div class="foto-regel ${heeftFotos ? '' : 'grijs'}">Foto\'s: &nbsp; ${heeftFotos ? fotoNamen : 'Geen foto\'s'}</div>
+          ${diepteRegelHTML}
           ${aanslHTML}
         </div>`;
       }
@@ -3344,6 +3410,7 @@ aanslHTML += `</div></div>`;
       .alg.rood { color: #c0392b; font-weight: 600; }
       .alg.grijs, .grijs { color: #999; }
       .foto-regel { font-size: 12px; color: #555; word-break: break-all; margin-bottom: 6px; padding-top: 4px; border-top: 1px solid #eee; }
+      .foto-regel.rood { color: #c0392b; font-weight: 600; border-top: none; padding-top: 0; }
       .aansl-tabel { width: 100%; border-collapse: collapse; table-layout: fixed; }
       .aansl-tabel th { background: #e8f4ec; padding: 3px 4px; text-align: left; border: 1px solid #ccc; font-size: 13px; white-space: nowrap; color: #0a4d27; }
       .aansl-tabel td { padding: 3px 4px; border: 1px solid #eee; vertical-align: top; font-size: 13px; word-break: break-word; }
