@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.31.2</title>
+  <title>Putten Inmeten v2.31.3</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -327,6 +327,12 @@
       display: flex;
       align-items: flex-end;
     }
+	
+	.rij-diam-koppel label {
+      min-height: 2.3em;
+      display: flex;
+      align-items: flex-end;
+    }
 
     .diam-voorstel {
       background: var(--accent-licht);
@@ -566,7 +572,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.31.2 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.31.3 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -744,7 +750,7 @@
     <div class="diam-voorstel" id="a-diam-voorstel"></div>
 	<div class="diam-voorstel" id="a-bob-hint" style="display:none;"></div>
 
-    <div class="invoer-rij" style="margin-top:6px;">
+    <div class="invoer-rij rij-diam-koppel" style="margin-top:6px;">
       <div>
         <label>Diameter (mm)</label>
         <select id="a-diam">
@@ -759,7 +765,7 @@
         </select>
       </div>
       <div>
-        <label>Verbonden met put <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></label>
+        <label><span>Verbonden met put <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></span></label>
         <select id="a-koppelput" onchange="aansluitingKoppelputGewijzigd()">
           <option value="">— geen —</option>
         </select>
@@ -793,7 +799,7 @@
 	<label style="margin-bottom:-4px;">Stromingsrichting</label>
     <div class="btn-rij" style="margin-bottom:4px;">
       <button type="button" id="sr-leeg"       class="btn btn-small sr-knop" onclick="srKiezen('');scrollNaarOpslaan()">Onbekend</button>
-  	  <button type="button" id="sr-naar-deze"  class="btn btn-small sr-knop" onclick="srKiezen('naar-deze');scrollNaarOpslaan()">→ In deze<br>Put</button>
+  	  <button type="button" id="sr-naar-deze"  class="btn btn-small sr-knop" onclick="srKiezen('naar-deze');scrollNaarOpslaan()">→ In deze<br>put</button>
       <button type="button" id="sr-naar-volgende" class="btn btn-small sr-knop" onclick="srKiezen('naar-volgende');scrollNaarOpslaan()">→ Naar<br>volgende</button>
     </div>
 
@@ -1128,8 +1134,10 @@ function scrollNaarOpslaan() {
   // die op Android Chrome wél de werkelijk zichtbare hoogte teruggeeft.
   // We wachten 300ms zodat het toetsenbord de kans heeft gehad om open te klappen
   // vóórdat we de berekening doen, anders rekenen we nog met de oude (volledige) hoogte.
-  function scrollNaarVormMateriaal() {
-    setTimeout(() => {
+  let _scrollVormMatTimer = null;
+function scrollNaarVormMateriaal() {
+    if (_scrollVormMatTimer) clearTimeout(_scrollVormMatTimer);
+    _scrollVormMatTimer = setTimeout(() => {
       const doel = document.getElementById('rij-vorm-mat');
       if (!doel) return;
       const vpHoogte = window.visualViewport ? window.visualViewport.height : window.innerHeight;
