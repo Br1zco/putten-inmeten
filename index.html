@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.31.1</title>
+  <title>Putten Inmeten v2.31.2</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -175,6 +175,12 @@
       margin-top: 0;
     }
 
+    .sr-knop {
+      padding: 8px 6px;
+      font-size: 0.82rem;
+      line-height: 1.25;
+    }
+
     .btn-rij {
       display: flex;
       gap: 8px;
@@ -309,7 +315,7 @@
 
     .invoer-rij-3 {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+	  grid-template-columns: 1.3fr 0.7fr 1fr;
       gap: 8px;
     }
 
@@ -362,7 +368,6 @@
       position: fixed;
       bottom: 20px;
       left: 50%;
-      transform: translateX(-50%);
       background: var(--accent);
       color: #fff;
       padding: 10px 18px;
@@ -370,9 +375,23 @@
       font-size: 0.9rem;
       font-weight: 600;
       z-index: 200;
-      display: none;
       max-width: calc(100% - 32px);
       text-align: center;
+      pointer-events: none;
+      transform: translate(-50%, 130%);
+      opacity: 0;
+      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease-out;
+    }
+
+    .melding.actief {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
+
+    .melding.weg {
+      transform: translate(-50%, 10%) scale(0.8);
+      opacity: 0;
+      transition: transform 0.16s ease-in, opacity 0.16s ease-in;
     }
 	
 	.app-subtitel {
@@ -547,7 +566,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.31.1 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.31.2 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -669,7 +688,7 @@
         <input type="number" id="t-aantal" min="1" max="12" placeholder="bijv. 3">
       </div>
       <div>
-        <label>Put diepte (cm) <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></label>
+		<label><span>Put diepte (cm) <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></span></label>
         <input type="number" id="t-diepte" placeholder="bijv. 320" inputmode="decimal" oninput="putDiepteGewijzigd()">
         <div class="diam-voorstel" id="t-diepte-hint" style="display:none;"></div>
       </div>
@@ -707,7 +726,7 @@
 </div>
 
   <!-- AANSLUITING INVULLEN (inline) -->
-  <div class="card" id="card-aansluiting" style="display:none;margin-top:12px;">
+  <div class="card" id="card-aansluiting" style="display:none;margin-top:12px;padding-bottom:70px;">
     <h2 id="aansluiting-titel">Aansluiting</h2>
     <input type="hidden" id="a-idx">
 	<input type="hidden" id="a-stroom">
@@ -715,11 +734,11 @@
     <div class="invoer-rij">
       <div>
         <label>BOB (cm)</label>
-		<input type="number" id="a-bob" placeholder="bijv. 165" inputmode="decimal" oninput="aansluiting_berekenDiam()">
+		<input type="number" id="a-bob" placeholder="bijv. 165" inputmode="decimal" oninput="aansluiting_berekenDiam(); scrollNaarVormMateriaal()" onfocus="scrollNaarVormMateriaal()">
       </div>
       <div>
         <label>BBB (cm)</label>
-        <input type="number" id="a-bbb" placeholder="bijv. 136" inputmode="decimal" oninput="aansluiting_berekenDiam()">
+        <input type="number" id="a-bbb" placeholder="bijv. 136" inputmode="decimal" oninput="aansluiting_berekenDiam(); scrollNaarVormMateriaal()" onfocus="scrollNaarVormMateriaal()">
       </div>
     </div>
     <div class="diam-voorstel" id="a-diam-voorstel"></div>
@@ -740,7 +759,7 @@
         </select>
       </div>
       <div>
-        <label>Gaat naar put <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></label>
+        <label>Verbonden met put <span style="font-weight:400;color:var(--subtekst)">(optioneel)</span></label>
         <select id="a-koppelput" onchange="aansluitingKoppelputGewijzigd()">
           <option value="">— geen —</option>
         </select>
@@ -751,7 +770,7 @@
       <button class="btn btn-primair" onclick="aansluitingNieuwePutAanmaken()" style="margin-top:6px;">Put aanmaken &amp; koppelen</button>
     </div>
 
-    <div class="invoer-rij" style="margin-top:10px;">
+    <div class="invoer-rij" id="rij-vorm-mat" style="margin-top:10px;">
       <div>
         <label>Vorm</label>
         <select id="a-vorm" onchange="scrollNaarOpslaan()">
@@ -774,8 +793,8 @@
 	<label style="margin-bottom:-4px;">Stromingsrichting</label>
     <div class="btn-rij" style="margin-bottom:4px;">
       <button type="button" id="sr-leeg"       class="btn btn-small sr-knop" onclick="srKiezen('');scrollNaarOpslaan()">Onbekend</button>
-      <button type="button" id="sr-naar-deze"  class="btn btn-small sr-knop" onclick="srKiezen('naar-deze');scrollNaarOpslaan()">→ Naar deze put</button>
-      <button type="button" id="sr-naar-volgende" class="btn btn-small sr-knop" onclick="srKiezen('naar-volgende');scrollNaarOpslaan()">→ Naar volgende</button>
+  	  <button type="button" id="sr-naar-deze"  class="btn btn-small sr-knop" onclick="srKiezen('naar-deze');scrollNaarOpslaan()">→ In deze<br>Put</button>
+      <button type="button" id="sr-naar-volgende" class="btn btn-small sr-knop" onclick="srKiezen('naar-volgende');scrollNaarOpslaan()">→ Naar<br>volgende</button>
     </div>
 
     <div class="btn-rij" style="margin-top:10px;">
@@ -1009,7 +1028,9 @@ async function fotoVerwijderenUitMap(naam) {
       for (const p of app.projecten)
         for (const put of p.putten)
           for (const f of (put.fotos || [])) delete f.data;
-    } catch(e) {}
+    } catch(e) {
+      toonMelding('⚠ Opgeslagen projecten konden niet geladen worden — data lijkt beschadigd. Neem contact op vóórdat je verdergaat.', 8000);
+    }
   }
 
   function opslaan() {
@@ -1027,19 +1048,38 @@ async function fotoVerwijderenUitMap(naam) {
   // =====================
   // MELDINGEN
   // =====================
-  let meldingTimer = null;
+  let meldingTimer    = null;
+  let meldingWegTimer = null;
   function toonMelding(tekst, duur = 3500) {
     const el = document.getElementById('melding');
     if (!el) { alert(tekst); return; }
+    if (meldingTimer)    clearTimeout(meldingTimer);
+    if (meldingWegTimer) clearTimeout(meldingWegTimer);
+
+    el.classList.remove('weg');
     el.textContent = tekst;
-    el.style.display = 'block';
-    if (meldingTimer) clearTimeout(meldingTimer);
-    meldingTimer = setTimeout(() => { el.style.display = 'none'; }, duur);
+    // Forceer reflow zodat de intro-animatie ook opnieuw start als de toast al zichtbaar was
+    void el.offsetWidth;
+    el.classList.add('actief');
+
+    meldingTimer = setTimeout(() => {
+      el.classList.remove('actief');
+      el.classList.add('weg');
+      meldingWegTimer = setTimeout(() => { el.classList.remove('weg'); }, 200);
+    }, duur);
   }
 
   // =====================
   // HULPFUNCTIES
   // =====================
+  function htmlEsc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+  
   function vandaag() { return new Date().toISOString().split('T')[0]; }
 
   function hoofdlettersPerWoord(el) {
@@ -1079,6 +1119,22 @@ function scrollNaarOpslaan() {
       if (!card) return;
       const onderKant = card.getBoundingClientRect().bottom + window.pageYOffset;
       window.scrollTo({ top: onderKant - window.innerHeight + 40, behavior: 'smooth' });
+    }, 300);
+  }
+
+  // Bij focus op BOB/BBB komt het numerieke toetsenbord omhoog en verkleint zo het
+  // zichtbare deel van het scherm. window.innerHeight blijft de VOLLEDIGE hoogte
+  // (incl. het stuk achter het toetsenbord) — daarom gebruiken we visualViewport,
+  // die op Android Chrome wél de werkelijk zichtbare hoogte teruggeeft.
+  // We wachten 300ms zodat het toetsenbord de kans heeft gehad om open te klappen
+  // vóórdat we de berekening doen, anders rekenen we nog met de oude (volledige) hoogte.
+  function scrollNaarVormMateriaal() {
+    setTimeout(() => {
+      const doel = document.getElementById('rij-vorm-mat');
+      if (!doel) return;
+      const vpHoogte = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const onderKant = doel.getBoundingClientRect().bottom + window.pageYOffset;
+      window.scrollTo({ top: onderKant - vpHoogte + 16, behavior: 'smooth' });
     }, 300);
   }
 
@@ -1211,8 +1267,8 @@ function scrollNaarOpslaan() {
       const vIcons = p.verzonden ? '<span class="verzonden-icons">' + '🚀'.repeat(p.verzonden) + '</span>' : '';
       return `<div class="lijst-item">
         <div style="flex:1;min-width:0;">
-          <div class="lijst-item-naam">${p.naam}${vIcons}</div>
-          <div class="lijst-item-meta">${p.init} · ${p.datum} · ${p.putten.length} put(ten)</div>
+          <div class="lijst-item-naam">${htmlEsc(p.naam)}${vIcons}</div>
+          <div class="lijst-item-meta">${htmlEsc(p.init)} · ${p.datum} · ${p.putten.length} put(ten)</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           <button class="btn btn-oranje btn-small" onclick="projectOpenen(${i})">Open</button>
@@ -1245,11 +1301,15 @@ function scrollNaarOpslaan() {
     }
   }
 
-  function projectVerwijderenDirect(idx) {
+  async function projectVerwijderenDirect(idx) {
     const p = app.projecten[idx];
     if (!confirm(`Project "${p.naam}" definitief verwijderen?`)) return;
-    for (const put of p.putten)
-      for (const f of (put.fotos || [])) fotoVerwijderenDB(f.naam);
+    for (const put of p.putten) {
+      for (const f of (put.fotos || [])) {
+        if (FSA_ONDERSTEUND && fotoMapHandle) await fotoVerwijderenUitMap(f.naam);
+        await fotoVerwijderenDB(f.naam);
+      }
+    }
     app.projecten.splice(idx, 1);
     if (app.actiefIdx === idx) app.actiefIdx = null;
     else if (app.actiefIdx > idx) app.actiefIdx--;
@@ -1275,6 +1335,7 @@ function scrollNaarOpslaan() {
     opslaan();
     document.getElementById('nieuwe-put-id').value = '';
     puttenLijstTekenen();
+    toonMelding(`Put ${id} toegevoegd ✓`);
   }
 
 function putCompleet(put) {
@@ -1307,8 +1368,8 @@ function putCompleet(put) {
       const meta = [put.type || '', put.putAlgemeen ? `⚠ ${put.putAlgemeen}` : ''].filter(Boolean).join(' · ');
       return `<div class="lijst-item">
         <div style="flex:1">
-		  <div class="lijst-item-naam">PUT ${put.id} ${fotoTag}${ovTag}${statusIcoon}</div>
-          ${meta ? `<div class="lijst-item-meta">${meta}</div>` : ''}
+		  <div class="lijst-item-naam">PUT ${htmlEsc(put.id)} ${fotoTag}${ovTag}${statusIcoon}</div>
+          ${meta ? `<div class="lijst-item-meta">${htmlEsc(meta)}</div>` : ''}
         </div>
         <button class="btn btn-oranje btn-small" style="margin-left:8px;" onclick="putDetailOpenen(${i})">Open</button>
       </div>`;
@@ -1435,11 +1496,14 @@ function putCompleet(put) {
 
 
 
-  function detailPutVerwijderen() {
+  async function detailPutVerwijderen() {
     const project = app.projecten[app.actiefIdx];
     const put = project.putten[actiefPutIdx];
     if (!confirm(`Put "${put.id}" verwijderen?`)) return;
-    for (const f of (put.fotos || [])) fotoVerwijderenDB(f.naam);
+    for (const f of (put.fotos || [])) {
+      if (FSA_ONDERSTEUND && fotoMapHandle) await fotoVerwijderenUitMap(f.naam);
+      await fotoVerwijderenDB(f.naam);
+    }
     project.putten.splice(actiefPutIdx, 1);
     opslaan();
     naarPuttenLijst();
@@ -1758,6 +1822,32 @@ function putCanvasBijwerken() {
 }
 
 let kompasActief = false;
+let kompasSin = null;
+let kompasCos = null;
+
+// KOMPAS_SMOOTHING: hoe sterk we de ruwe magnetometer-uitlezing dempen.
+// Lager = stabieler maar trager, hoger = reageert sneller maar wiebelt meer.
+// De magnetometer staat in het veld vaak vlak boven een metalen putdeksel,
+// wat forse schommelingen geeft — 0.15 dempt dat merkbaar zonder dat het
+// kompas traag aanvoelt bij normaal ronddraaien.
+const KOMPAS_SMOOTHING = 0.15;
+
+// Middelt hoeken via hun sin/cos-component i.p.v. de hoek zelf, zodat er geen
+// rare sprong ontstaat op de grens van 359° -> 0° (noord).
+function kompasSmoothen(hoek) {
+  const rad = hoek * Math.PI / 180;
+  const sin = Math.sin(rad), cos = Math.cos(rad);
+  if (kompasSin === null) {
+    kompasSin = sin;
+    kompasCos = cos;
+  } else {
+    kompasSin += (sin - kompasSin) * KOMPAS_SMOOTHING;
+    kompasCos += (cos - kompasCos) * KOMPAS_SMOOTHING;
+  }
+  let gladHoek = Math.atan2(kompasSin, kompasCos) * 180 / Math.PI;
+  if (gladHoek < 0) gladHoek += 360;
+  return gladHoek;
+}
 
 function kompasStarten() {
   const wrap = document.getElementById('kompas-wrap');
@@ -1780,6 +1870,8 @@ function kompasListenerToevoegen() {
   const wrap = document.getElementById('kompas-wrap');
   if (wrap) wrap.style.display = 'flex';
   kompasActief = true;
+  kompasSin = null;
+  kompasCos = null;
   if ('ondeviceorientationabsolute' in window) {
     window.addEventListener('deviceorientationabsolute', kompasUpdate, true);
   } else {
@@ -1806,6 +1898,18 @@ function kompasUpdate(e) {
   } else if (e.alpha !== null) {
     hoek = e.alpha;
   }
+
+  // alpha is de rotatie t.o.v. de SENSOR, niet t.o.v. wat je op het scherm ziet.
+  // Houdt de gebruiker de telefoon anders vast dan de sensor-oriëntatie (bijv.
+  // op zijn kant), dan wijst de pijl zonder deze correctie structureel verkeerd.
+  const schermHoek = (screen.orientation && typeof screen.orientation.angle === 'number')
+    ? screen.orientation.angle
+    : 0;
+  hoek = (hoek + schermHoek + 360) % 360;
+
+  // Ruwe magnetometer-data dempen (zie kompasSmoothen) vóór het tekenen.
+  hoek = kompasSmoothen(hoek);
+
   kompasTeekenen(hoek);
 }
 
@@ -2522,7 +2626,7 @@ function overstortKoppelputSelectLaden() {
   const huidig  = put.overstort?.koppelput || '';
   sel.innerHTML = '<option value="">— geen / in deze put —</option>' +
     project.putten.filter((_, i) => i !== actiefPutIdx).map(p =>
-      `<option value="${p.id}" ${p.id === huidig ? 'selected' : ''}>${p.id}</option>`
+      `<option value="${htmlEsc(p.id)}" ${p.id === huidig ? 'selected' : ''}>${htmlEsc(p.id)}</option>`
     ).join('') +
     '<option value="__nieuw">＋ Nieuwe put</option>';
   document.getElementById('ov-nieuwe-put-wrap').style.display = 'none';
@@ -2717,13 +2821,34 @@ function fotoGridTekenen() {
 async function fotoVerwijderen(idx) {
   const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
   if (!confirm(`Foto ${put.fotos[idx].volgnummer} verwijderen?`)) return;
+  const project = app.projecten[app.actiefIdx];
   const naam = put.fotos[idx].naam;
+
   // Verwijder uit map én uit IndexedDB (beide pogen, fouten negeren)
   if (FSA_ONDERSTEUND && fotoMapHandle) await fotoVerwijderenUitMap(naam);
-  fotoVerwijderenDB(naam);
+  await fotoVerwijderenDB(naam);
   put.fotos.splice(idx, 1);
-  const project = app.projecten[app.actiefIdx];
-  put.fotos.forEach((f, i) => { f.volgnummer = i + 1; f.naam = fotoNaam(put.id, project.init, i + 1); });
+
+  // Hernummer de overgebleven foto's — en hernoem ook het daadwerkelijk opgeslagen
+  // bestand mee. Alleen de metadata (f.naam) aanpassen zoals voorheen zorgde ervoor
+  // dat de nieuwe naam niet overeenkwam met het bestand op schijf/in de database,
+  // waardoor de foto niet meer gevonden werd (zie code review).
+  for (let i = 0; i < put.fotos.length; i++) {
+    const oudeNaam   = put.fotos[i].naam;
+    const nieuweNaam = fotoNaam(put.id, project.init, i + 1);
+    if (nieuweNaam !== oudeNaam) {
+      if (FSA_ONDERSTEUND && fotoMapHandle) {
+        const data = await fotoLezenUitMap(oudeNaam);
+        if (data) { await fotoSchrijvenNaarMap(nieuweNaam, data); await fotoVerwijderenUitMap(oudeNaam); }
+      } else {
+        const data = await fotoOphalenDB(oudeNaam);
+        if (data) { await fotoOpslaanDB(nieuweNaam, data); await fotoVerwijderenDB(oudeNaam); }
+      }
+    }
+    put.fotos[i].naam       = nieuweNaam;
+    put.fotos[i].volgnummer = i + 1;
+  }
+
   opslaan();
   fotoGridTekenen();
 }
@@ -3218,6 +3343,14 @@ async function exporteerRapportPDF() {
     const file = new File([pdfBlob], bestandsnaam, { type: 'application/pdf' });
     const url = URL.createObjectURL(pdfBlob);
 
+    // TIJDELIJK — diagnose voor het "PDF downloadt i.p.v. delen"-probleem.
+    // Laat zien hoe groot de PDF is en of canShare() 'm toelaat, zodat we kunnen
+    // bevestigen of bestandsgrootte de oorzaak is vóórdat we gaan optimaliseren.
+    // Mag weer weg zodra dit bevestigd/opgelost is.
+    const kanDelenPdf = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    console.log(`[PDF-diagnose] grootte: ${(pdfBlob.size / 1024).toFixed(0)} KB · canShare: ${kanDelenPdf}`);
+    toonMelding(`PDF ${(pdfBlob.size / 1024).toFixed(0)} KB · delen mogelijk: ${kanDelenPdf ? 'ja' : 'nee'}`, 6000);
+
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: project.naam });
@@ -3270,13 +3403,7 @@ async function exporteerRapport() {
       if (!doorgaan) return;
     }
 
-    function htmlEsc(str) {
-      return String(str || '')
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
-    }
+    
 
     toonMelding('Rapport wordt opgebouwd…', 8000);
 	try {
