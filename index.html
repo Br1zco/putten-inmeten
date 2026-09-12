@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.31.3</title>
+  <title>Putten Inmeten v2.31.4</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -572,7 +572,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.31.3 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.31.4 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -855,8 +855,12 @@
 
 <script>
   const DIAMS = [110,125,160,200,250,300,315,400,500,600,700,800,900,1000,1200,1250,1400,1500,1600,1800,2000,9999];
-  const MAX_FOTO_BREEDTE = 1200;
-  const FOTO_KWALITEIT   = 0.75;
+  const PVC_ZONE_MAX      = 315; // t/m dit formaat: strakke zone (overwegend PVC/buitenmaat)
+  const KLEINE_MAAT_MARGE = 10;  // mm marge in de strakke zone (meetonzekerheid/wanddikte)
+  const GROTE_MAAT_MARGE  = 50;  // mm marge vanaf 400mm (grotere sprongen tussen beschikbare maten)
+  const PVC_AUTO_DIAMS    = [110, 125, 160, 250, 315]; // deze maten zijn zo goed als altijd PVC
+  const MAX_FOTO_BREEDTE  = 1200;
+  const FOTO_KWALITEIT    = 0.75;
   const FSA_ONDERSTEUND = ('showDirectoryPicker' in window);
   
   let fotoMapHandle = null;
@@ -1177,7 +1181,23 @@ function scrollNaarVormMateriaal() {
   // DIAMETER BEREKENING
   // =====================
   function dichtstbijzijndeDiam(mm) {
-    return DIAMS.reduce((a, b) => Math.abs(b - mm) < Math.abs(a - mm) ? b : a);
+    // Twee zones, elk met eigen marge t.o.v. de kleinere beschikbare maat:
+    //  - t/m PVC_ZONE_MAX (110-315mm, overwegend PVC/buitenmaat): kleine marge
+    //    (KLEINE_MAAT_MARGE) voor normale meetonzekerheid/wanddiktevariatie.
+    //    Een 315mm-buis meet je bijv. nooit exact 315 — tot ~10mm eroverheen
+    //    is dat nog gewoon een 315.
+    //  - vanaf 400mm (vaker beton/binnenmaat, én grotere sprongen tussen de
+    //    beschikbare maten): ruimere marge (GROTE_MAAT_MARGE), zodat een
+    //    kleine meetonnauwkeurigheid geen hele maatklasse laat overslaan
+    //    (bijv. 1000 → 1200).
+    const kleiner = DIAMS.filter(d => d <= mm).pop();
+    const groter  = DIAMS.find(d => d >= mm);
+
+    if (kleiner === undefined) return groter;               // mm kleiner dan kleinste beschikbare maat
+    if (groter === undefined || kleiner === groter) return kleiner; // exacte match
+
+    const marge = kleiner <= PVC_ZONE_MAX ? KLEINE_MAAT_MARGE : GROTE_MAAT_MARGE;
+    return (mm - kleiner) > marge ? groter : kleiner;
   }
   
   // =====================
@@ -2374,10 +2394,17 @@ function onMouseUp(e) {
         return;
       }
 
-      const diam = dichtstbijzijndeDiam(mm);
+            const diam = dichtstbijzijndeDiam(mm);
       el.style.display = 'block';
       el.textContent   = `BOB − BBB = ${verschil} cm → voorstel: ${diam} mm`;
       sel.value        = String(diam);
+
+      // Deze maten zijn zo goed als altijd PVC — vul materiaal automatisch in,
+      // maar alleen als de gebruiker nog geen materiaal heeft gekozen.
+      const matSel = document.getElementById('a-mat');
+      if (PVC_AUTO_DIAMS.includes(diam) && !matSel.value) {
+        matSel.value = 'PVC';
+      }
 
       // Validatie B: verschil > 1000 cm — vermoedelijke typefout
       if (verschil > 1000) {
