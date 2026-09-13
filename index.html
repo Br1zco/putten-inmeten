@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.32</title>
+  <title>Putten Inmeten v2.32.1</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -235,12 +235,24 @@
   padding: 16px;
 }
 
+#foto-viewer-canvas {
+  width: 100%;
+  height: 100%;
+  max-height: 88vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+}
+
 #foto-viewer-img {
   display: block;
-  margin: auto;
   max-width: 100%;
   max-height: 88vh;
   border-radius: 8px;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 #foto-viewer-sluit {
@@ -258,7 +270,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  z-index: 1;
 }
+
+.foto-thumb img { cursor: pointer; }
 
 .foto-thumb img { cursor: pointer; }
 
@@ -580,9 +595,11 @@
 
 <div id="gps-debug"></div>
 
-<div class="modal-overlay" id="foto-viewer-overlay" onclick="fotoViewerSluiten()">
+<div class="modal-overlay" id="foto-viewer-overlay" onclick="fotoViewerOverlayKlik(event)">
   <button id="foto-viewer-sluit" onclick="event.stopPropagation(); fotoViewerSluiten()">✕</button>
-  <img id="foto-viewer-img" src="" alt="">
+  <div id="foto-viewer-canvas">
+    <img id="foto-viewer-img" src="" alt="">
+  </div>
 </div>
 
 <!-- SCHERM: PROJECTEN -->
@@ -620,7 +637,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.32 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.32.1 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -788,11 +805,11 @@
     <div class="invoer-rij">
       <div>
         <label>BOB (cm)</label>
-		<input type="number" id="a-bob" placeholder="bijv. 165" inputmode="decimal" oninput="aansluiting_berekenDiam(); scrollNaarVormMateriaal()" onfocus="scrollNaarVormMateriaal()">
+        <input type="number" id="a-bob" placeholder="bijv. 165" inputmode="decimal" oninput="aansluiting_berekenDiam(); scrollNaarVormMateriaal()">
       </div>
       <div>
         <label>BBB (cm)</label>
-        <input type="number" id="a-bbb" placeholder="bijv. 136" inputmode="decimal" oninput="aansluiting_berekenDiam(); scrollNaarVormMateriaal()" onfocus="scrollNaarVormMateriaal()">
+        <input type="number" id="a-bbb" placeholder="bijv. 136" inputmode="decimal" oninput="aansluiting_berekenDiam(); scrollNaarVormMateriaal()">
       </div>
     </div>
     <div class="diam-voorstel" id="a-diam-voorstel"></div>
@@ -2912,16 +2929,100 @@ function fotoGridTekenen() {
   });
 }
 
+let fvScale       = 1, fvTransX = 0, fvTransY = 0;
+let fvStartScale  = 1, fvStartDist = 0;
+let fvStartTransX = 0, fvStartTransY = 0;
+let fvPanStartX   = 0, fvPanStartY = 0;
+let fvPanActief   = false;
+let fvLaatsteTik  = 0;
+
 function fotoViewerTonen(src) {
   if (!src) return; // nog niet geladen — negeer de klik
   document.getElementById('foto-viewer-img').src = src;
+  fotoViewerZoomResetten();
   document.getElementById('foto-viewer-overlay').classList.add('actief');
 }
 
 function fotoViewerSluiten() {
   document.getElementById('foto-viewer-overlay').classList.remove('actief');
   document.getElementById('foto-viewer-img').src = '';
+  fotoViewerZoomResetten();
 }
+
+function fotoViewerOverlayKlik(e) {
+  // Alleen sluiten bij tik op de lege achtergrond, niet op de foto zelf
+  if (e.target.id === 'foto-viewer-overlay') fotoViewerSluiten();
+}
+
+function fotoViewerZoomResetten() {
+  fvScale = 1; fvTransX = 0; fvTransY = 0;
+  fotoViewerTransformToepassen();
+}
+
+function fotoViewerTransformToepassen() {
+  document.getElementById('foto-viewer-img').style.transform =
+    `translate(${fvTransX}px, ${fvTransY}px) scale(${fvScale})`;
+}
+
+function fvAfstand(t1, t2) {
+  return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+}
+
+function fotoViewerTouchStart(e) {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    fvStartDist   = fvAfstand(e.touches[0], e.touches[1]);
+    fvStartScale  = fvScale;
+    fvStartTransX = fvTransX;
+    fvStartTransY = fvTransY;
+    fvPanActief   = false;
+  } else if (e.touches.length === 1) {
+    // Dubbeltik: zoom resetten
+    const nu = Date.now();
+    if (nu - fvLaatsteTik < 300) {
+      fotoViewerZoomResetten();
+      fvLaatsteTik = 0;
+      return;
+    }
+    fvLaatsteTik = nu;
+
+    if (fvScale > 1) {
+      fvPanActief = true;
+      fvPanStartX = e.touches[0].clientX - fvTransX;
+      fvPanStartY = e.touches[0].clientY - fvTransY;
+    }
+  }
+}
+
+function fotoViewerTouchMove(e) {
+  if (e.touches.length === 2 && fvStartDist) {
+    e.preventDefault();
+    const nieuweAfstand = fvAfstand(e.touches[0], e.touches[1]);
+    fvScale = Math.min(Math.max(fvStartScale * (nieuweAfstand / fvStartDist), 1), 5);
+    fotoViewerTransformToepassen();
+  } else if (e.touches.length === 1 && fvPanActief) {
+    e.preventDefault();
+    fvTransX = e.touches[0].clientX - fvPanStartX;
+    fvTransY = e.touches[0].clientY - fvPanStartY;
+    fotoViewerTransformToepassen();
+  }
+}
+
+function fotoViewerTouchEnd(e) {
+  if (e.touches.length < 2) fvStartDist = 0;
+  if (e.touches.length === 0) {
+    fvPanActief = false;
+    if (fvScale <= 1) { fvScale = 1; fvTransX = 0; fvTransY = 0; fotoViewerTransformToepassen(); }
+  }
+}
+
+(function() {
+  const canvas = document.getElementById('foto-viewer-canvas');
+  canvas.addEventListener('touchstart',  fotoViewerTouchStart, { passive: false });
+  canvas.addEventListener('touchmove',   fotoViewerTouchMove,  { passive: false });
+  canvas.addEventListener('touchend',    fotoViewerTouchEnd,   { passive: false });
+  canvas.addEventListener('touchcancel', fotoViewerTouchEnd,   { passive: false });
+})();
 
 async function fotoVerwijderen(idx) {
   const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
