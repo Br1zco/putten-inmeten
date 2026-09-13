@@ -1,5 +1,5 @@
 // ─── Versie: verhoog dit getal bij elke nieuwe deploy ───────────────────────
-const VERSIE = 'putten-v2.31.4';
+const VERSIE = 'putten-v2.32';
 
 // Basis-URL werkt automatisch op elke GitHub Pages submap
 const BASE = new URL('./', self.location).href;

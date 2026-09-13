@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.31.4</title>
+  <title>Putten Inmeten v2.32</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -230,6 +230,38 @@
 
     .modal h2 { margin-bottom: 10px; }
 
+#foto-viewer-overlay {
+  align-items: center;
+  padding: 16px;
+}
+
+#foto-viewer-img {
+  display: block;
+  margin: auto;
+  max-width: 100%;
+  max-height: 88vh;
+  border-radius: 8px;
+}
+
+#foto-viewer-sluit {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.foto-thumb img { cursor: pointer; }
+
     .leeg {
       text-align: center;
       color: var(--subtekst);
@@ -288,6 +320,17 @@
       font-size: 0.7rem;
       padding: 1px 5px;
       border-radius: 3px;
+    }
+	
+	.foto-leeg-tekst {
+      grid-column: 1 / -1;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      color: var(--subtekst);
+      background: var(--bg-3);
+      border: 1px solid var(--rand);
+      border-radius: 8px;
+      padding: 10px 12px;
     }
 
     .foto-del {
@@ -537,6 +580,11 @@
 
 <div id="gps-debug"></div>
 
+<div class="modal-overlay" id="foto-viewer-overlay" onclick="fotoViewerSluiten()">
+  <button id="foto-viewer-sluit" onclick="event.stopPropagation(); fotoViewerSluiten()">✕</button>
+  <img id="foto-viewer-img" src="" alt="">
+</div>
+
 <!-- SCHERM: PROJECTEN -->
 <div id="s-projecten" class="scherm">
   <div class="app-header">
@@ -572,7 +620,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.31.4 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.32 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -732,7 +780,7 @@
 </div>
 
   <!-- AANSLUITING INVULLEN (inline) -->
-  <div class="card" id="card-aansluiting" style="display:none;margin-top:12px;padding-bottom:70px;">
+  <div class="card" id="card-aansluiting" style="display:none;margin-top:12px;padding-bottom:320px;">
     <h2 id="aansluiting-titel">Aansluiting</h2>
     <input type="hidden" id="a-idx">
 	<input type="hidden" id="a-stroom">
@@ -1296,7 +1344,7 @@ function scrollNaarVormMateriaal() {
       return `<div class="lijst-item">
         <div style="flex:1;min-width:0;">
           <div class="lijst-item-naam">${htmlEsc(p.naam)}${vIcons}</div>
-          <div class="lijst-item-meta">${htmlEsc(p.init)} · ${p.datum} · ${p.putten.length} put(ten)</div>
+		  <div class="lijst-item-meta">${htmlEsc(p.init)} · ${p.datum} · ${p.putten.length} ${p.putten.length === 1 ? 'put' : 'putten'}</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           <button class="btn btn-oranje btn-small" onclick="projectOpenen(${i})">Open</button>
@@ -1393,7 +1441,12 @@ function putCompleet(put) {
       const statusIcoon = compleet
         ? '<span style="color:#0f6434;font-size:1rem;margin-left:6px;">✓</span>'
         : '<span style="color:#ed6f26;font-size:1rem;margin-left:6px;">○</span>';
-      const meta = [put.type || '', put.putAlgemeen ? `⚠ ${put.putAlgemeen}` : ''].filter(Boolean).join(' · ');
+      const aantalAansl = (put.aansluitingen || []).length;
+      const typeMeta = [
+        put.type || '',
+        aantalAansl ? `${aantalAansl} aansluiting${aantalAansl === 1 ? '' : 'en'}` : ''
+      ].filter(Boolean).join(' · ');
+      const meta = [typeMeta, put.putAlgemeen ? `⚠ ${put.putAlgemeen}` : ''].filter(Boolean).join(' · ');
       return `<div class="lijst-item">
         <div style="flex:1">
 		  <div class="lijst-item-naam">PUT ${htmlEsc(put.id)} ${fotoTag}${ovTag}${statusIcoon}</div>
@@ -2013,7 +2066,7 @@ function kompasTeekenen(hoek) {
   // Tik op BUITENSTE HELFT van lijn → voor longpress/slepen
   function lijnGeraaktBuiten(px, py) {
     const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
-    let dichtstbij = -1, minAfstand = 30;
+    let dichtstbij = -1, minAfstand = 45;
     (put.aansluitingen || []).forEach((a, i) => {
       const rad = (a.hoek - 90) * Math.PI / 180;
       const lijnLengte = putStraal * 1.7;
@@ -2112,7 +2165,7 @@ function onTouchMove(e) {
 
   if (!sleepBevestigd) {
     // Longpress nog niet bevestigd: annuleer als vinger te vroeg beweegt
-    if (bewogen > 10) {
+    if (bewogen > 16) {
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       sleepIdx = -1;
     }
@@ -2830,12 +2883,18 @@ function fotoGridTekenen() {
 
   // Laad fotos asynchroon en render zodra data beschikbaar is
   const grid = document.getElementById('foto-grid');
+  
+   if (fotos.length === 0) {
+    grid.innerHTML = `<div class="foto-leeg-tekst">Maak minimaal 2 foto's: 1) een overzichtsfoto van de put in de straat met iets herkenbaars erop, en 2) een foto van in de put met de aansluitingen.</div>`;
+    return;
+  }
+  
   grid.innerHTML = fotos.map((f, i) => `
-    <div class="foto-thumb" id="thumb-${i}">
-      <img src="" alt="${f.naam}" id="thumb-img-${i}" style="opacity:0">
-      <span class="foto-nr">${f.volgnummer}</span>
-      <button class="foto-del" onclick="fotoVerwijderen(${i})">✕</button>
-    </div>
+  <div class="foto-thumb" id="thumb-${i}">
+    <img src="" alt="${f.naam}" id="thumb-img-${i}" style="opacity:0" onclick="fotoViewerTonen(this.src)">
+    <span class="foto-nr">${f.volgnummer}</span>
+    <button class="foto-del" onclick="fotoVerwijderen(${i})">✕</button>
+  </div>
   `).join('');
 
   fotos.forEach(async (f, i) => {
@@ -2851,6 +2910,17 @@ function fotoGridTekenen() {
       if (img) { img.src = src; img.style.opacity = '1'; }
     }
   });
+}
+
+function fotoViewerTonen(src) {
+  if (!src) return; // nog niet geladen — negeer de klik
+  document.getElementById('foto-viewer-img').src = src;
+  document.getElementById('foto-viewer-overlay').classList.add('actief');
+}
+
+function fotoViewerSluiten() {
+  document.getElementById('foto-viewer-overlay').classList.remove('actief');
+  document.getElementById('foto-viewer-img').src = '';
 }
 
 async function fotoVerwijderen(idx) {
