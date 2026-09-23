@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.32.1</title>
+  <title>Putten Inmeten v2.32.2</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -272,8 +272,6 @@
   cursor: pointer;
   z-index: 1;
 }
-
-.foto-thumb img { cursor: pointer; }
 
 .foto-thumb img { cursor: pointer; }
 
@@ -637,7 +635,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.32.1 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.32.2 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -1512,7 +1510,8 @@ function putCompleet(put) {
       document.getElementById('noord-label').style.display = 'block';
 	  document.getElementById('kompas-wrap').style.display = 'flex';
       document.getElementById('tekening-uitleg').style.display = 'block';
-      setTimeout(() => { initCanvas(); putCanvasTekenen(); kompasStarten(); }, 80);
+      kompasStarten(); // direct aanroepen — iOS staat requestPermission() alleen toe binnen de tik-call zelf
+      setTimeout(() => { initCanvas(); putCanvasTekenen(); }, 80);
     } else {
       document.getElementById('card-tekening').style.display = 'none';
       document.getElementById('noord-label').style.display = 'none';
@@ -1719,8 +1718,9 @@ function putStatusGewijzigd() {
     document.getElementById('btn-overstort').style.display    = 'block';
     overstortKnopBijwerken();
 
+    kompasStarten(); // direct aanroepen, zelfde reden als in putDetailOpenen()
     setTimeout(() => {
-      initCanvas(); putCanvasTekenen(); kompasStarten();
+      initCanvas(); putCanvasTekenen();
       document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 150);
     toonMelding('Tekening opgeslagen ✓');
