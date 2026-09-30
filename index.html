@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <title>Putten Inmeten v2.32.3</title>
+  <title>Putten Inmeten v2.32.4</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -615,11 +615,15 @@
   <div class="card">
     <h2>Nieuw project</h2>
     <label>Projectnaam</label>
-    <input type="text" id="np-naam" placeholder="bijv. LB10261805 Groenlo Barkenkamp" oninput="hoofdlettersPerWoord(this)">
+	<input type="text" id="np-naam" placeholder="bijv. LB10261805 Groenlo Barkenkamp"
+       autocapitalize="words" autocorrect="off" spellcheck="false"
+       oninput="hoofdlettersPerWoord(this)">
     <div class="invoer-rij" style="margin-top:10px;">
       <div>
         <label>Initialen</label>
-        <input type="text" id="np-initialen" placeholder="bijv. PD" oninput="naarHoofdletters(this)" maxlength="6">
+		<input type="text" id="np-initialen" placeholder="bijv. PD"
+       autocapitalize="characters" autocorrect="off" spellcheck="false"
+       oninput="naarHoofdletters(this)" maxlength="6">
       </div>
       <div>
         <label>Datum</label>
@@ -635,7 +639,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.32.3 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.32.4 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -684,12 +688,10 @@
     <h2>Exporteren</h2>
     <button class="btn btn-primair" onclick="exporteerRapportPDF()">📄 Deel als PDF</button>
     <button class="btn" onclick="exporteerRapport()" style="margin-top:8px;">🌐 Deel als HTML</button>
-    <button class="btn" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
-    <div id="fotomap-pad" style="font-size:0.78rem;color:var(--subtekst);margin-top:5px;padding-left:4px;"></div>
-	<button class="btn" onclick="fotosDelen()" style="margin-top:8px;">📸 Deel foto's</button>
+    <button class="btn" onclick="fotosDelen()" style="margin-top:8px;">📸 Deel foto's</button>
     <button class="btn" id="btn-fotomap" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
+    <div id="fotomap-pad" style="font-size:0.78rem;color:var(--subtekst);margin-top:5px;padding-left:4px;"></div>
   </div>
-</div>
 
 <!-- SCHERM: PUT DETAIL -->
 <div id="s-put-detail" class="scherm">
@@ -1159,7 +1161,7 @@ async function fotoVerwijderenUitMap(naam) {
 
   function hoofdlettersPerWoord(el) {
     const p = el.selectionStart;
-    el.value = el.value.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+    el.value = el.value.replace(/(^|[\s\-\/])(\S)/g, (m, voor, letter) => voor + letter.toUpperCase());
     el.setSelectionRange(p, p);
   }
 
