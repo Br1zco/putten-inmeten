@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Putten Inmeten v2.32.2</title>
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <title>Putten Inmeten v2.32.3</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -635,7 +635,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.32.2 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.32.3 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -686,6 +686,8 @@
     <button class="btn" onclick="exporteerRapport()" style="margin-top:8px;">🌐 Deel als HTML</button>
     <button class="btn" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
     <div id="fotomap-pad" style="font-size:0.78rem;color:var(--subtekst);margin-top:5px;padding-left:4px;"></div>
+	<button class="btn" onclick="fotosDelen()" style="margin-top:8px;">📸 Deel foto's</button>
+    <button class="btn" id="btn-fotomap" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
   </div>
 </div>
 
@@ -3094,6 +3096,11 @@ dbOpenen().then(async () => {
   await fotoMapInitialiseren(); // haal opgeslagen map-handle op
   fotoMapPadTonen();
   
+  if (!FSA_ONDERSTEUND) {
+  const b = document.getElementById('btn-fotomap');
+  if (b) b.style.display = 'none';
+  }
+  
     app.actiefIdx = null;
     projectLijstTekenen();
     toonScherm('s-projecten');
@@ -3270,6 +3277,40 @@ function putSamenvattingBerekenen(putten) {
   return { totaal, compleetLijst, onvolledigLijst, metOverstort, metOverstortNamen,
            nietToegankelijk, nietToegankelijkNamen, aantalFotos, onvolledigNamen };
 }
+
+async function fotosDelen() {
+  const project = app.projecten[app.actiefIdx];
+  if (!project) return;
+
+  toonMelding("Foto's worden verzameld…", 8000);
+  try {
+    const bestanden = [];
+    for (const put of project.putten) {
+      for (const f of (put.fotos || [])) {
+        let src = f.data || null;
+        if (!src && FSA_ONDERSTEUND && fotoMapHandle) src = await fotoLezenUitMap(f.naam);
+        if (!src && db) src = await fotoOphalenDB(f.naam);
+        if (!src) continue;
+        const blob = await (await fetch(src)).blob();
+        bestanden.push(new File([blob], f.naam, { type: 'image/jpeg' }));
+      }
+    }
+
+    if (!bestanden.length) { toonMelding("Geen foto's om te delen."); return; }
+
+    if (!(navigator.canShare && navigator.canShare({ files: bestanden }))) {
+      toonMelding("Delen van foto's wordt niet ondersteund op dit apparaat.", 5000);
+      return;
+    }
+
+    await navigator.share({ files: bestanden, title: project.naam });
+    toonMelding(`${bestanden.length} foto's gedeeld ✓`);
+  } catch (e) {
+    if (e.name === 'AbortError') { toonMelding('Delen geannuleerd.'); return; }
+    toonMelding("Foto's delen mislukt: " + (e.message || e), 5000);
+  }
+}
+
 
   // Stukje PDF Export
 async function exporteerRapportPDF() {

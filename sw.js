@@ -1,5 +1,5 @@
 // ─── Versie: verhoog dit getal bij elke nieuwe deploy ───────────────────────
-const VERSIE = 'putten-v2.32.2';
+const VERSIE = 'putten-v2.32.3';
 
 // Basis-URL werkt automatisch op elke GitHub Pages submap
 const BASE = new URL('./', self.location).href;
@@ -11,6 +11,7 @@ const KERN_BESTANDEN = [
   BASE + 'manifest.json',
   BASE + 'icon-192.png',
   BASE + 'icon-512.png',
+  BASE + 'apple-touch-icon.png',
 ];
 
 // ─── Installatie: cache de kernbestanden ─────────────────────────────────────
