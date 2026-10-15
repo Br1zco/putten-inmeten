@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <title>Putten Inmeten v2.32.5</title>
+  <title>Putten Inmeten v2.32.6</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -639,7 +639,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.32.5 · Patrick Duteweerd · 2026
+    Putten Inmeten v2.32.6 · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -1377,6 +1377,7 @@ function scrollNaarVormMateriaal() {
 
 
   function projectOpenen(idx) {
+    _fotoDeelWachtrij = null; // nieuwe foto's niet missen bij opnieuw openen
     app.actiefIdx = idx;
     opslaan();
     alleFotosLaden().then(() => {
@@ -3283,33 +3284,58 @@ function putSamenvattingBerekenen(putten) {
            nietToegankelijk, nietToegankelijkNamen, aantalFotos, onvolledigNamen };
 }
 
+// Wachtrij voor het delen van foto's. Delen mag alleen direct na een tik,
+// dus we laden eerst alles in het geheugen (tik 1) en delen daarna in
+// groepen (tik 2, 3, ...).
+let _fotoDeelWachtrij = null;
+const FOTO_DEEL_GROEP = 20;
+
 async function fotosDelen() {
   const project = app.projecten[app.actiefIdx];
   if (!project) return;
 
-  toonMelding("Foto's worden verzameld…", 8000);
-  try {
-    const bestanden = [];
-    for (const put of project.putten) {
-      for (const f of (put.fotos || [])) {
-        let src = f.data || null;
-        if (!src && FSA_ONDERSTEUND && fotoMapHandle) src = await fotoLezenUitMap(f.naam);
-        if (!src && db) src = await fotoOphalenDB(f.naam);
-        if (!src) continue;
-        const blob = await (await fetch(src)).blob();
-        bestanden.push(new File([blob], f.naam, { type: 'image/jpeg' }));
+  // Tik 1: foto's klaarzetten
+  if (!_fotoDeelWachtrij || _fotoDeelWachtrij.projectIdx !== app.actiefIdx) {
+    toonMelding("Foto's worden klaargezet…", 8000);
+    try {
+      const bestanden = [];
+      for (const put of project.putten) {
+        for (const f of (put.fotos || [])) {
+          let src = f.data || null;
+          if (!src && FSA_ONDERSTEUND && fotoMapHandle) src = await fotoLezenUitMap(f.naam);
+          if (!src && db) src = await fotoOphalenDB(f.naam);
+          if (!src) continue;
+          const blob = await (await fetch(src)).blob();
+          bestanden.push(new File([blob], f.naam, { type: 'image/jpeg' }));
+        }
       }
+      if (!bestanden.length) { toonMelding("Geen foto's om te delen."); return; }
+      _fotoDeelWachtrij = { projectIdx: app.actiefIdx, bestanden, volgende: 0 };
+      toonMelding(`${bestanden.length} foto's klaar. Tik nogmaals op Deel foto's.`, 6000);
+    } catch (e) {
+      toonMelding("Klaarzetten mislukt: " + (e.message || e), 5000);
     }
+    return;
+  }
 
-    if (!bestanden.length) { toonMelding("Geen foto's om te delen."); return; }
+  // Tik 2 en verder: één groep delen
+  const q     = _fotoDeelWachtrij;
+  const groep = q.bestanden.slice(q.volgende, q.volgende + FOTO_DEEL_GROEP);
 
-    if (!(navigator.canShare && navigator.canShare({ files: bestanden }))) {
-      toonMelding("Delen van foto's wordt niet ondersteund op dit apparaat.", 5000);
-      return;
+  if (!(navigator.canShare && navigator.canShare({ files: groep }))) {
+    toonMelding("Delen van foto's wordt niet ondersteund op dit apparaat.", 5000);
+    return;
+  }
+
+  try {
+    await navigator.share({ files: groep, title: project.naam });
+    q.volgende += groep.length;
+    if (q.volgende >= q.bestanden.length) {
+      _fotoDeelWachtrij = null;
+      toonMelding(`Alle ${q.bestanden.length} foto's gedeeld ✓`, 4000);
+    } else {
+      toonMelding(`${q.volgende} van ${q.bestanden.length} gedeeld. Tik opnieuw voor de volgende groep.`, 6000);
     }
-
-    await navigator.share({ files: bestanden, title: project.naam });
-    toonMelding(`${bestanden.length} foto's gedeeld ✓`);
   } catch (e) {
     if (e.name === 'AbortError') { toonMelding('Delen geannuleerd.'); return; }
     toonMelding("Foto's delen mislukt: " + (e.message || e), 5000);
