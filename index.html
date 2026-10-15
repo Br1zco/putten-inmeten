@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Putten Inmeten">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <title>Putten Inmeten v2.32.7</title>
+  <title>Putten Inmeten</title>
   
   <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
@@ -639,7 +639,7 @@
   </div>
   
     <div style="text-align:center; font-size:0.72rem; color:var(--subtekst); margin-top:30px; padding-bottom:10px;">
-    Putten Inmeten v2.32.7 · Patrick Duteweerd · 2026
+      Putten Inmeten v<span id="app-versie-tekst"></span> · Patrick Duteweerd · 2026
   </div>
 </div>
 
@@ -925,6 +925,7 @@
 
 
 <script>
+  const APP_VERSIE = '2.32.8'; // houd gelijk met VERSIE in sw.js ('putten-v' + dit nummer)
   const DIAMS = [110,125,160,200,250,300,315,400,500,600,700,800,900,1000,1200,1250,1400,1500,1600,1800,2000,9999];
   const PVC_ZONE_MAX      = 315; // t/m dit formaat: strakke zone (overwegend PVC/buitenmaat)
   const KLEINE_MAAT_MARGE = 10;  // mm marge in de strakke zone (meetonzekerheid/wanddikte)
@@ -3130,6 +3131,8 @@ async function fotoVerwijderen(idx) {
 }
 
 dbOpenen().then(async () => {
+  document.getElementById('app-versie-tekst').textContent = APP_VERSIE;
+  document.title = `Putten Inmeten v${APP_VERSIE}`;
   document.getElementById('np-datum').value     = vandaag();
   document.getElementById('np-initialen').value = initOphalen();
   await fotoMapInitialiseren(); // haal opgeslagen map-handle op
@@ -3319,17 +3322,34 @@ function putSamenvattingBerekenen(putten) {
 
 // Wachtrij voor het delen van foto's. Delen mag alleen direct na een tik,
 // dus we laden eerst alles in het geheugen (tik 1) en delen daarna in
-// groepen (tik 2, 3, ...).
+// groepen (tik 2, 3, ...). De groepsgrootte past zichzelf aan: weigert het
+// toestel een groep, dan wordt de volgende kleiner. De werkende grootte
+// wordt onthouden voor de volgende keer.
 let _fotoDeelWachtrij = null;
-const FOTO_DEEL_GROEP = 4;
+const FOTO_DEEL_STAPPEN = [40, 20, 10, 4, 2, 1];
 
+function fotoDeelGroepOphalen() {
+  const opgeslagen = parseInt(localStorage.getItem('pp_deelgroep'));
+  return FOTO_DEEL_STAPPEN.includes(opgeslagen) ? opgeslagen : 40;
+}
+
+function fotoDeelGroepVerkleinen(huidig) {
+  const kleiner = FOTO_DEEL_STAPPEN.find(s => s < huidig);
+  if (kleiner === undefined) return null; // al op het minimum
+  localStorage.setItem('pp_deelgroep', String(kleiner));
+  return kleiner;
+}
+
+let _fotoDeelBezig = false;
 async function fotosDelen() {
   const project = app.projecten[app.actiefIdx];
   if (!project) return;
 
   // Tik 1: foto's klaarzetten
   if (!_fotoDeelWachtrij || _fotoDeelWachtrij.projectIdx !== app.actiefIdx) {
-    toonMelding("Foto's worden klaargezet…", 8000);
+    if (_fotoDeelBezig) { toonMelding("Even geduld, foto's worden nog klaargezet…", 4000); return; }
+    _fotoDeelBezig = true;
+    toonMelding("Foto's worden klaargezet… dit kan even duren.", 15000);
     try {
       const bestanden = [];
       for (const put of project.putten) {
@@ -3343,20 +3363,29 @@ async function fotosDelen() {
         }
       }
       if (!bestanden.length) { toonMelding("Geen foto's om te delen."); return; }
-      _fotoDeelWachtrij = { projectIdx: app.actiefIdx, bestanden, volgende: 0 };
-      toonMelding(`${bestanden.length} foto's klaar. Tik nogmaals op Deel foto's.`, 6000);
+      _fotoDeelWachtrij = { projectIdx: app.actiefIdx, bestanden, volgende: 0, groep: fotoDeelGroepOphalen() };
+	  toonMelding(`${bestanden.length} foto's klaar. Start met ${_fotoDeelWachtrij.groep} per keer. Tik nogmaals op Deel foto's.`, 6000);
     } catch (e) {
       toonMelding("Klaarzetten mislukt: " + (e.message || e), 5000);
+    } finally {
+      _fotoDeelBezig = false;
     }
     return;
   }
 
   // Tik 2 en verder: één groep delen
   const q     = _fotoDeelWachtrij;
-  const groep = q.bestanden.slice(q.volgende, q.volgende + FOTO_DEEL_GROEP);
+  const groep = q.bestanden.slice(q.volgende, q.volgende + q.groep);
 
+  // Past de groep niet (canShare = false), dan ook automatisch verkleinen
   if (!(navigator.canShare && navigator.canShare({ files: groep }))) {
-    toonMelding("Delen van foto's wordt niet ondersteund op dit apparaat.", 5000);
+    const kleiner = fotoDeelGroepVerkleinen(q.groep);
+    if (kleiner === null) {
+      toonMelding("Delen wordt niet ondersteund. Gebruik 'Download foto's naar toestel'.", 7000);
+    } else {
+      q.groep = kleiner;
+      toonMelding(`Groep te groot voor dit toestel. Nu ${kleiner} per keer, tik opnieuw.`, 6000);
+    }
     return;
   }
 
@@ -3367,11 +3396,20 @@ async function fotosDelen() {
       _fotoDeelWachtrij = null;
       toonMelding(`Alle ${q.bestanden.length} foto's gedeeld ✓`, 4000);
     } else {
-      toonMelding(`${q.volgende} van ${q.bestanden.length} gedeeld. Tik opnieuw voor de volgende groep.`, 6000);
+	  toonMelding(`${q.volgende} van ${q.bestanden.length} gedeeld (${q.groep} per keer). Tik opnieuw voor de volgende groep.`, 6000);
     }
   } catch (e) {
     if (e.name === 'AbortError') { toonMelding('Delen geannuleerd.'); return; }
-    toonMelding("Foto's delen mislukt: " + (e.message || e), 5000);
+
+    // Weigering door het toestel: volgende poging met een kleinere groep.
+    // Deze groep is niet gedeeld, q.volgende blijft dus staan.
+    const kleiner = fotoDeelGroepVerkleinen(q.groep);
+    if (kleiner === null) {
+      toonMelding("Delen mislukt, ook met 1 foto. Gebruik 'Download foto's naar toestel'.", 8000);
+    } else {
+      q.groep = kleiner;
+      toonMelding(`Delen geweigerd. Nu ${kleiner} per keer, tik opnieuw.`, 6000);
+    }
   }
 }
 
