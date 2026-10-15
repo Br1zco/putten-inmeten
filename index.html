@@ -882,16 +882,6 @@
 <div class="card" id="card-overstort" style="display:none;margin-top:12px;">
   <h2>Overstort</h2>
 
-  <label>Gekoppelde put</label>
-  <div style="display:flex;gap:8px;align-items:center;">
-    <select id="ov-koppelput" style="flex:1;" onchange="overstortKoppelputGewijzigd()">
-      <option value="">— geen / in deze put —</option>
-    </select>
-  </div>
-  <div id="ov-nieuwe-put-wrap" style="display:none;margin-top:6px;">
-    <input type="text" id="ov-nieuwe-put-id" placeholder="Nieuw put ID, bijv. G-1043">
-    <button class="btn btn-primair" onclick="overstortNieuwePutAanmaken()" style="margin-top:6px;">Put aanmaken &amp; koppelen</button>
-  </div>
 
   <div class="invoer-rij" style="margin-top:10px;">
     <div>
@@ -925,7 +915,7 @@
 
 
 <script>
-  const APP_VERSIE = '2.32.8'; // houd gelijk met VERSIE in sw.js ('putten-v' + dit nummer)
+  const APP_VERSIE = '2.32.9'; // houd gelijk met VERSIE in sw.js ('putten-v' + dit nummer)
   const DIAMS = [110,125,160,200,250,300,315,400,500,600,700,800,900,1000,1200,1250,1400,1500,1600,1800,2000,9999];
   const PVC_ZONE_MAX      = 315; // t/m dit formaat: strakke zone (overwegend PVC/buitenmaat)
   const KLEINE_MAAT_MARGE = 10;  // mm marge in de strakke zone (meetonzekerheid/wanddikte)
@@ -2529,49 +2519,106 @@ function onMouseUp(e) {
   }
 
 function aansluitingOpslaan() {
-    const idx = parseInt(document.getElementById('a-idx').value);
-    const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
-    put.aansluitingen[idx] = {
-      ...put.aansluitingen[idx],
-      bob:       document.getElementById('a-bob').value,
-      bbb:       document.getElementById('a-bbb').value,
-      diam:      document.getElementById('a-diam').value,
-      vorm:      document.getElementById('a-vorm').value,
-      mat:       document.getElementById('a-mat').value,
-      opmerking: document.getElementById('a-opmerking').value,
-      stroom:    document.getElementById('a-stroom').value,
-      koppelput: (() => { const v = document.getElementById('a-koppelput').value; return v === '__nieuw' ? '' : v; })()
-    };
-    opslaan();
-    putDiepteControleren();
-    document.getElementById('card-aansluiting').style.display = 'none';
-    putCanvasTekenen();
-    setTimeout(() => {
-      document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 50);
+  const idx = parseInt(document.getElementById('a-idx').value);
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
+  const gekozen   = document.getElementById('a-koppelput').value;
+  const koppelput = gekozen === '__nieuw' ? '' : gekozen;
+
+  // Bevestigd: de oude koppeling(en) naar deze put elders verwijderen
+  if (koppelput && koppelput === _koppelBevestigdId) {
+    koppelGebruik(koppelput).forEach(g => {
+      app.projecten[app.actiefIdx].putten[g.pi].aansluitingen[g.ai].koppelput = '';
+    });
   }
+  _koppelBevestigdId = '';
+
+  put.aansluitingen[idx] = {
+    ...put.aansluitingen[idx],
+    bob:       document.getElementById('a-bob').value,
+    bbb:       document.getElementById('a-bbb').value,
+    diam:      document.getElementById('a-diam').value,
+    vorm:      document.getElementById('a-vorm').value,
+    mat:       document.getElementById('a-mat').value,
+    opmerking: document.getElementById('a-opmerking').value,
+    stroom:    document.getElementById('a-stroom').value,
+    koppelput
+  };
+  opslaan();
+  putDiepteControleren();
+  document.getElementById('card-aansluiting').style.display = 'none';
+  putCanvasTekenen();
+  setTimeout(() => {
+    document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+}
 
   function aansluitingAnnuleren() {
     document.getElementById('card-aansluiting').style.display = 'none';
     document.getElementById('card-tekening').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-function aansluitingKoppelputSelectLaden(huidig) {
-    const project = app.projecten[app.actiefIdx];
-    const sel = document.getElementById('a-koppelput');
-    sel.innerHTML = '<option value="">— onbekend —</option>' +
-      project.putten
-        .filter((_, i) => i !== actiefPutIdx)
-        .map(p => `<option value="${p.id}" ${p.id === (huidig || '') ? 'selected' : ''}>${p.id}</option>`)
-        .join('') +
-      '<option value="__nieuw">＋ Nieuwe put</option>';
-    document.getElementById('a-nieuwe-put-wrap').style.display = 'none';
-  }
+let _koppelVorig       = '';  // laatst geaccepteerde keuze in de select
+let _koppelBevestigdId = '';  // put waarvoor "ja, elders verwijderen" gekozen is
 
-  function aansluitingKoppelputGewijzigd() {
-    const val = document.getElementById('a-koppelput').value;
-    document.getElementById('a-nieuwe-put-wrap').style.display = val === '__nieuw' ? 'block' : 'none';
+// Alle aansluitingen in het project die naar putId wijzen,
+// behalve de aansluiting die nu bewerkt wordt.
+function koppelGebruik(putId) {
+  const project   = app.projecten[app.actiefIdx];
+  const huidigIdx = parseInt(document.getElementById('a-idx').value);
+  const lijst = [];
+  project.putten.forEach((p, pi) => {
+    (p.aansluitingen || []).forEach((a, ai) => {
+      if (pi === actiefPutIdx && ai === huidigIdx) return;
+      if (a.koppelput === putId) lijst.push({ pi, ai, put: p.id, nr: ai + 1 });
+    });
+  });
+  return lijst;
+}
+
+function aansluitingKoppelputSelectLaden(huidig) {
+  const project = app.projecten[app.actiefIdx];
+  const sel     = document.getElementById('a-koppelput');
+  const vrij = [], bezet = [];
+  project.putten.forEach((p, i) => {
+    if (i === actiefPutIdx) return;
+    const gebruik = koppelGebruik(p.id);
+    const gekozen = p.id === (huidig || '') ? ' selected' : '';
+    if (gebruik.length) {
+      bezet.push(`<option value="${htmlEsc(p.id)}"${gekozen} style="color:#999;">${htmlEsc(p.id)} · in gebruik (put ${htmlEsc(gebruik[0].put)}, aansl. ${gebruik[0].nr})</option>`);
+    } else {
+      vrij.push(`<option value="${htmlEsc(p.id)}"${gekozen}>${htmlEsc(p.id)}</option>`);
+    }
+  });
+  sel.innerHTML = '<option value="">— onbekend —</option>' +
+    vrij.join('') +
+    '<option value="__nieuw">＋ Nieuwe put</option>' +
+    (bezet.length ? `<optgroup label="Al in gebruik">${bezet.join('')}</optgroup>` : '');
+  _koppelVorig       = huidig || '';
+  _koppelBevestigdId = '';
+  document.getElementById('a-nieuwe-put-wrap').style.display = 'none';
+}
+
+function aansluitingKoppelputGewijzigd() {
+  const sel = document.getElementById('a-koppelput');
+  const val = sel.value;
+  _koppelBevestigdId = '';
+
+  if (val && val !== '__nieuw') {
+    const gebruik = koppelGebruik(val);
+    if (gebruik.length) {
+      const waar = gebruik.map(g => `put ${g.put}, aansluiting ${g.nr}`).join('\n• ');
+      const ok = confirm(`Put ${val} is al gekoppeld bij:\n• ${waar}\n\nDaar verwijderen en bij deze aansluiting zetten?`);
+      if (!ok) { sel.value = _koppelVorig; }
+      else     { _koppelBevestigdId = val; _koppelVorig = val; }
+    } else {
+      _koppelVorig = val;
+    }
+  } else {
+    _koppelVorig = val;
   }
+  document.getElementById('a-nieuwe-put-wrap').style.display =
+    sel.value === '__nieuw' ? 'block' : 'none';
+}
 
   function aansluitingNieuwePutAanmaken() {
     const id      = document.getElementById('a-nieuwe-put-id').value.trim();
@@ -2666,7 +2713,6 @@ function overstortPlaatsen(px, py) {
   opslaan();
   putCanvasTekenen();
   overstortKnopBijwerken();
-  overstortKoppelputSelectLaden();
   overstortJuistGeplaatst = true;
   setTimeout(() => { overstortJuistGeplaatst = false; }, 500);
   overstortBewerken();
@@ -2698,29 +2744,6 @@ function tekenOverstortOpCanvas(ctx2, put, mid, straal, ll, donker, isExport) {
     ctx2.lineTo(cx2 + Math.cos(loodRad) *  aansluitingOvs, cy2 + Math.sin(loodRad) *  aansluitingOvs);
     ctx2.strokeStyle = kleur; ctx2.lineWidth = isExport ? 3.5 : 2.5; ctx2.stroke();
 
-    if (ov.koppelput) {
-      // Links naast het lijn-nummer (90° links van de lijnrichting)
-      // Aanpassen afstand isExport ? #rapport : #scherm (1e waarde in html export, 2e waarde op scherm)
-      const numAfstand = straal + ll + (isExport ? 18 : 1);
-      const zijRad     = rad - Math.PI / 2;
-      const zijOffset  = isExport ? 90 : 38;
-      const lx = mid.x + Math.cos(rad) * numAfstand + Math.cos(zijRad) * zijOffset;
-      const ly = mid.y + Math.sin(rad) * numAfstand + Math.sin(zijRad) * zijOffset;
-      const fontSize = isExport ? 32 : Math.round(straal * 0.26);
-      ctx2.font = `bold ${fontSize}px Arial`;
-      const tekst = `→ ${ov.koppelput}`;
-      const tw    = ctx2.measureText(tekst).width;
-      const pad   = isExport ? 14 : 4;
-      ctx2.fillStyle = '#dce9f5';
-      ctx2.fillRect(lx - tw/2 - pad, ly - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
-      ctx2.strokeStyle = kleur;
-      ctx2.lineWidth   = isExport ? 1.5 : 1;
-      ctx2.strokeRect(lx - tw/2 - pad, ly - fontSize/2 - pad, tw + pad*2, fontSize + pad*2);
-      ctx2.fillStyle    = kleur;
-      ctx2.textAlign    = 'center';
-      ctx2.textBaseline = 'middle';
-      ctx2.fillText(tekst, lx, ly);
-    }
 
   } else {
     const rad     = (ov.hoek - 90) * Math.PI / 180;
@@ -2766,59 +2789,9 @@ function overstortGeraakt(px, py) {
 }
 
 
-function overstortKoppelputSelectLaden() {
-  const project = app.projecten[app.actiefIdx];
-  const put     = project.putten[actiefPutIdx];
-  const sel     = document.getElementById('ov-koppelput');
-  const huidig  = put.overstort?.koppelput || '';
-  sel.innerHTML = '<option value="">— geen / in deze put —</option>' +
-    project.putten.filter((_, i) => i !== actiefPutIdx).map(p =>
-      `<option value="${htmlEsc(p.id)}" ${p.id === huidig ? 'selected' : ''}>${htmlEsc(p.id)}</option>`
-    ).join('') +
-    '<option value="__nieuw">＋ Nieuwe put</option>';
-  document.getElementById('ov-nieuwe-put-wrap').style.display = 'none';
-  // Altijd velden herstellen bij (her)openen, ook als __nieuw eerder geselecteerd was
-  ['ov-hoogte', 'ov-breedte', 'ov-materiaal', 'ov-opmerking'].forEach(id => {
-    const el = document.getElementById(id);
-    el.disabled      = false;
-    el.style.opacity = '1';
-  });
-}
-
-function overstortKoppelputGewijzigd() {
-  const val     = document.getElementById('ov-koppelput').value;
-  const isNieuw = val === '__nieuw';
-  document.getElementById('ov-nieuwe-put-wrap').style.display = isNieuw ? 'block' : 'none';
-  ['ov-hoogte', 'ov-breedte', 'ov-materiaal', 'ov-opmerking'].forEach(veldId => {
-    const el = document.getElementById(veldId);
-    el.disabled    = isNieuw;
-    el.style.opacity = isNieuw ? '0.35' : '1';
-  });
-}
-
-function overstortNieuwePutAanmaken() {
-  const id      = document.getElementById('ov-nieuwe-put-id').value.trim();
-  const project = app.projecten[app.actiefIdx];
-  if (!id) { alert('Vul een put ID in.'); return; }
-  if (project.putten.some(p => p.id === id)) { alert(`Put ID "${id}" bestaat al.`); return; }
-  project.putten.push({ id, fotos: [], aansluitingen: [], putAlgemeen: '', overstort: null });
-  opslaan();
-  overstortKoppelputSelectLaden();
-  document.getElementById('ov-koppelput').value = id;
-  document.getElementById('ov-nieuwe-put-wrap').style.display = 'none';
-  document.getElementById('ov-nieuwe-put-id').value = '';
-  ['ov-hoogte', 'ov-breedte', 'ov-materiaal', 'ov-opmerking'].forEach(veldId => {
-    const el = document.getElementById(veldId);
-    el.disabled      = false;
-    el.style.opacity = '1';
-  });
-  toonMelding(`Put ${id} aangemaakt ✓`);
-}
-
 function overstortBewerken() {
   const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
   const ov  = put.overstort || {};
-  overstortKoppelputSelectLaden();
   document.getElementById('ov-hoogte').value    = ov.drempelhoogte  || '';
   document.getElementById('ov-breedte').value   = ov.drempelbreedte || '';
   document.getElementById('ov-materiaal').value = ov.materiaal      || '';
@@ -2830,15 +2803,13 @@ function overstortBewerken() {
 }
 
 function overstortOpslaan() {
-  const put       = app.projecten[app.actiefIdx].putten[actiefPutIdx];
-  const koppelput = document.getElementById('ov-koppelput').value;
+  const put = app.projecten[app.actiefIdx].putten[actiefPutIdx];
   put.overstort = {
     ...put.overstort,
     drempelhoogte:  document.getElementById('ov-hoogte').value,
     drempelbreedte: document.getElementById('ov-breedte').value,
     materiaal:      document.getElementById('ov-materiaal').value,
-    opmerking:      document.getElementById('ov-opmerking').value,
-    koppelput:      koppelput === '__nieuw' ? '' : koppelput
+    opmerking:      document.getElementById('ov-opmerking').value
   };
   opslaan();
   putCanvasTekenen();
@@ -3653,7 +3624,6 @@ async function exporteerRapportPDF() {
             ['Drempelbreedte', ov.drempelbreedte ? ov.drempelbreedte + ' cm' : '-'],
             ['Materiaal', ov.materiaal || '-']
           ];
-          if (ov.koppelput) ovBody.push(['Gekoppeld aan put', ov.koppelput]);
           if (ov.opmerking) ovBody.push([{ content: 'Opmerking', styles: { fontStyle: 'italic' } }, { content: ov.opmerking, styles: { fontStyle: 'italic' } }]);
 
           doc.autoTable({
@@ -3842,7 +3812,6 @@ if (put.overstort?.aanwezig) {
       <tr><td>Drempelhoogte</td><td>${ov.drempelhoogte ? ov.drempelhoogte + ' cm' : '—'}</td></tr>
       <tr><td>Drempelbreedte</td><td>${ov.drempelbreedte ? ov.drempelbreedte + ' cm' : '—'}</td></tr>
       <tr><td>Materiaal</td><td>${ov.materiaal || '—'}</td></tr>
-      ${ov.koppelput ? `<tr><td>Gekoppeld aan put</td><td>${htmlEsc(ov.koppelput)}</td></tr>` : ''}
       ${ov.opmerking ? `<tr class="opm-rij"><td colspan="2">${htmlEsc(ov.opmerking)}</td></tr>` : ''}
     </tbody>
   </table>`;
@@ -3907,8 +3876,8 @@ aanslHTML += `</div></div>`;
       .aansl-tabel col.vorm { width: 72px; }
       .aansl-tabel col.mat  { width: 100px; }
 	  .aansl-tabel col.put  { width: 98px; }
-	  // Vuistregel: neem je langste verwachte put ID, tel de tekens, vermenigvuldig met 8 en tel 16px padding op.
-      // Dus voor een ID van 8 tekens: 8×8 + 16 = 80px. Dat is een veilige minimumwaarde voor de meeste gevallen.
+	  /* Vuistregel: neem je langste verwachte put ID, tel de tekens, vermenigvuldig met 8 en tel 16px padding op.
+         Dus voor een ID van 8 tekens: 8×8 + 16 = 80px. Veilige minimumwaarde voor de meeste gevallen. */
 	  
 	  .opm-rij td { color: #444; font-style: italic; padding: 3px 5px 6px 14px; border-top: none; font-size: 13px; }
     </style></head><body>
