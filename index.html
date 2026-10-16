@@ -915,7 +915,7 @@
 
 
 <script>
-  const APP_VERSIE = '2.32.9'; // houd gelijk met VERSIE in sw.js ('putten-v' + dit nummer)
+  const APP_VERSIE = '2.32.10'; // houd gelijk met VERSIE in sw.js ('putten-v' + dit nummer)
   const DIAMS = [110,125,160,200,250,300,315,400,500,600,700,800,900,1000,1200,1250,1400,1500,1600,1800,2000,9999];
   const PVC_ZONE_MAX      = 315; // t/m dit formaat: strakke zone (overwegend PVC/buitenmaat)
   const KLEINE_MAAT_MARGE = 10;  // mm marge in de strakke zone (meetonzekerheid/wanddikte)
@@ -2831,13 +2831,20 @@ function overstortAnnuleren() {
   // =====================
 async function fotoMaken() {
   if (FSA_ONDERSTEUND && !fotoMapHandle) {
+    let gelukt = false;
     const opgeslagen = await handleOphalenDB();
     if (opgeslagen) {
-      const status = await opgeslagen.requestPermission({ mode: 'readwrite' });
-      if (status === 'granted') fotoMapHandle = opgeslagen;
+      try {
+        const status = await opgeslagen.requestPermission({ mode: 'readwrite' });
+        if (status === 'granted') { fotoMapHandle = opgeslagen; gelukt = true; }
+      } catch (e) { /* valt door naar map kiezen */ }
     }
+    if (!gelukt) await fotoMapKiezen(); // staat binnen de tik, dus toegestaan
+    fotoMapPadTonen();
+    if (!fotoMapHandle) return;
+    toonMelding('Map ingesteld ✓ Tik nu nog een keer op Foto maken.', 4000);
+    return;
   }
-
   const inp = document.getElementById('camera-input');
   inp.value = '';
   setTimeout(() => inp.click(), 50);
@@ -2877,24 +2884,24 @@ document.getElementById('camera-input').addEventListener('change', async functio
     let data = await comprimeerFoto(file);
     if (gpsBijFoto) data = gpsNaarExif(data, gpsBijFoto);
 
-    if (FSA_ONDERSTEUND && !fotoMapHandle) {
-      toonMelding('Kies éénmalig een map voor foto-opslag…', 4000);
-      await fotoMapKiezen();
-    }
+    // Altijd eerst in IndexedDB: dit is het vangnet
+    if (!db) { alert('Database niet beschikbaar.'); return; }
+    await fotoOpslaanDB(naam, data);
 
+    // Daarna in de gekozen map, of anders als download bewaren
+    let inMap = false;
     if (FSA_ONDERSTEUND && fotoMapHandle) {
-      await fotoSchrijvenNaarMap(naam, data);
-    } else {
-      if (!db) { alert('Database niet beschikbaar.'); return; }
-      await fotoOpslaanDB(naam, data);
+      try { await fotoSchrijvenNaarMap(naam, data); inMap = true; }
+      catch (e) { console.warn('Schrijven naar map mislukt:', e); }
     }
+    if (!inMap) fotoDownloaden(naam, data);
 
     if (!put.fotos) put.fotos = [];
     put.fotos.push({ naam, data, gps: gpsBijFoto, tijdstip: new Date().toLocaleString('nl-NL'), volgnummer: nr });
 
     opslaan();
     fotoGridTekenen();
-    toonMelding(`Foto ${nr} opgeslagen ✓`);
+    toonMelding(inMap ? `Foto ${nr} opgeslagen ✓` : `Foto ${nr} opgeslagen in app + Downloads ✓`, inMap ? 3500 : 5000);
     if (put.fotos.length >= 2) gpsStoppen(); // 2 foto's is genoeg, een 3e is niet standaard
 
   } catch(e) {
@@ -3297,11 +3304,11 @@ function putSamenvattingBerekenen(putten) {
 // toestel een groep, dan wordt de volgende kleiner. De werkende grootte
 // wordt onthouden voor de volgende keer.
 let _fotoDeelWachtrij = null;
-const FOTO_DEEL_STAPPEN = [40, 20, 10, 4, 2, 1];
+const FOTO_DEEL_STAPPEN = [10, 4, 2, 1];
 
 function fotoDeelGroepOphalen() {
   const opgeslagen = parseInt(localStorage.getItem('pp_deelgroep'));
-  return FOTO_DEEL_STAPPEN.includes(opgeslagen) ? opgeslagen : 40;
+  return FOTO_DEEL_STAPPEN.includes(opgeslagen) ? opgeslagen : 10;
 }
 
 function fotoDeelGroepVerkleinen(huidig) {
