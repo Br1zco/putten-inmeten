@@ -690,6 +690,7 @@
     <button class="btn" onclick="exporteerRapport()" style="margin-top:8px;">🌐 Deel als HTML</button>
     <button class="btn" onclick="fotosDelen()" style="margin-top:8px;">📸 Deel foto's</button>
 	<button class="btn" onclick="fotosDownloaden()" style="margin-top:8px;">⬇️ Download foto's naar toestel</button>
+	<button class="btn" onclick="migratieExporteren()" style="margin-top:8px;">📦 Exporteer voor migratie (tijdelijk)</button>
     <button class="btn" id="btn-fotomap" onclick="fotoMapKiezen()" style="margin-top:8px;">📁 Foto-map wijzigen</button>
     <div id="fotomap-pad" style="font-size:0.78rem;color:var(--subtekst);margin-top:5px;padding-left:4px;"></div>
   </div>   <!-- sluit card Exporteren -->
@@ -915,7 +916,7 @@
 
 
 <script>
-  const APP_VERSIE = '2.32.10'; // houd gelijk met VERSIE in sw.js ('putten-v' + dit nummer)
+  const APP_VERSIE = '2.32.11'; // houd gelijk met VERSIE in sw.js ('putten-v' + dit nummer)
   const DIAMS = [110,125,160,200,250,300,315,400,500,600,700,800,900,1000,1200,1250,1400,1500,1600,1800,2000,9999];
   const PVC_ZONE_MAX      = 315; // t/m dit formaat: strakke zone (overwegend PVC/buitenmaat)
   const KLEINE_MAAT_MARGE = 10;  // mm marge in de strakke zone (meetonzekerheid/wanddikte)
@@ -3388,6 +3389,77 @@ async function fotosDelen() {
       q.groep = kleiner;
       toonMelding(`Delen geweigerd. Nu ${kleiner} per keer, tik opnieuw.`, 6000);
     }
+  }
+}
+
+
+// =====================
+// TIJDELIJK: export voor migratie naar de nieuwe server-app
+// Na migratie van alle telefoons weer verwijderen (functie + knop).
+// =====================
+async function migratieExporteren() {
+  const project = app.projecten[app.actiefIdx];
+  if (!project) return;
+
+  toonMelding('Export wordt klaargezet… dit kan even duren.', 30000);
+  try {
+    // Projectgegevens zonder foto-data
+    const kopie = JSON.parse(JSON.stringify(project));
+    for (const put of kopie.putten)
+      for (const f of (put.fotos || [])) delete f.data;
+
+    // Foto's apart verzamelen, zelfde bronnen als bij "Deel foto's"
+    const fotoDelen  = [];
+    const ontbrekend = [];
+    for (const put of project.putten) {
+      for (const f of (put.fotos || [])) {
+        let src = f.data || null;
+        if (!src && FSA_ONDERSTEUND && fotoMapHandle) src = await fotoLezenUitMap(f.naam);
+        if (!src && db) src = await fotoOphalenDB(f.naam);
+        if (src) fotoDelen.push(JSON.stringify(f.naam) + ':' + JSON.stringify(src));
+        else ontbrekend.push(f.naam);
+      }
+    }
+
+    if (ontbrekend.length) {
+      const ok = confirm(`${ontbrekend.length} foto('s) niet gevonden op dit toestel:\n${ontbrekend.slice(0, 5).join('\n')}${ontbrekend.length > 5 ? '\n…' : ''}\n\nToch exporteren?`);
+      if (!ok) { toonMelding('Export geannuleerd.'); return; }
+    }
+
+    // Bestand opbouwen als lijst van stukken, zodat er geen reusachtige string ontstaat
+    const delen = [
+      '{"formaat":"putten-migratie","versie":1,"appVersie":', JSON.stringify(APP_VERSIE),
+      ',"exportTijd":', JSON.stringify(new Date().toISOString()),
+      ',"project":', JSON.stringify(kopie),
+      ',"fotos":{'
+    ];
+    fotoDelen.forEach((d, i) => delen.push((i ? ',' : '') + d));
+    delen.push('}}');
+
+    const blob = new Blob(delen, { type: 'application/json' });
+    const bestandsnaam = `Migratie_${project.naam.replace(/\s+/g, '_').replace(/\//g, '-')}_${project.init}.json`;
+    const file = new File([blob], bestandsnaam, { type: 'application/json' });
+    const mb = (blob.size / 1048576).toFixed(1);
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: project.naam });
+        toonMelding(`Export gedeeld ✓ (${mb} MB)`, 5000);
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') { toonMelding('Delen geannuleerd.'); return; }
+        // delen mislukt: val door naar download
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    fotoDownloaden(bestandsnaam, url);
+    toonMelding(`Export gedownload ✓ (${mb} MB, map Downloads)`, 6000);
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+  } catch (err) {
+    toonMelding('Export mislukt: ' + (err.message || err), 8000);
+    console.error('migratieExporteren fout:', err);
   }
 }
 
